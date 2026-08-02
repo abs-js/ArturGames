@@ -1,0 +1,1857 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="mobile-web-app-capable" content="yes">
+	<link rel="icon" type="image/png" sizes="32x32" href="img.png">
+	<link rel="apple-touch-icon" href="imgA.png">
+	<link rel="icon" type="image/png" sizes="192x192" href="img.png">
+	<title>Futebol Mobile</title>
+	<style>
+		* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+		html, body {
+			background-color: #1a1a1a;
+			color: #fff;
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			margin: 0;
+			padding: 0;
+			width: 100%;
+			height: 100%;
+			overflow: hidden;
+			touch-action: none;
+			user-select: none;
+			-webkit-user-select: none;
+		}
+		body {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: flex-start;
+		}
+		h1 { 
+			margin: 4px 0 2px; 
+			font-size: 16px;
+			display: none; /* esconde no mobile para economizar espaço */
+		}
+		
+		#topBar {
+			display: flex;
+			align-items: center;
+			gap: 6px;
+			margin: 4px 0;
+			flex-wrap: wrap;
+			justify-content: center;
+			padding: 0 4px;
+			width: 100%;
+			max-width: 100vw;
+			z-index: 5;
+		}
+		#scoreBoard {
+			font-size: 14px;
+			font-weight: bold;
+			background: #000;
+			padding: 4px 8px;
+			border-radius: 6px;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+		}
+		#timerDisplay {
+			font-size: 14px;
+			font-weight: bold;
+			background: #222;
+			padding: 4px 8px;
+			border-radius: 6px;
+			color: #ffd700;
+			border: 1px solid #555;
+		}
+		.tactical-box {
+			font-size: 11px;
+			background: #111;
+			padding: 3px 6px;
+			border-radius: 6px;
+			border: 1px solid #444;
+			display: flex;
+			flex-direction: column;
+			gap: 1px;
+		}
+		#btnFullscreen {
+			background: #333; color: #ffd700; border: 1px solid #ffd700;
+			padding: 4px 8px; border-radius: 6px; cursor: pointer;
+			font-size: 12px; font-weight: bold;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+		}
+
+		.blue-team { color: #00bfff; }
+		.red-team { color: #ff4500; }
+		
+		#gameContainer {
+			position: relative;
+			width: 100%;
+			flex: 1;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			overflow: hidden;
+		}
+		canvas {
+			border: 2px solid #fff;
+			box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+			background-color: #2e8b57;
+			display: block;
+			max-width: 100%;
+			max-height: 100%;
+			touch-action: none;
+		}
+		
+		#menuOverlay {
+			position: absolute;
+			top: 0; left: 0; width: 100%; height: 100%;
+			background: rgba(0, 0, 0, 0.88);
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			z-index: 20;
+			padding: 10px;
+		}
+		.menu-box {
+			background: #333;
+			padding: 18px 16px;
+			border-radius: 12px;
+			border: 2px solid #555;
+			text-align: center;
+			width: 100%;
+			max-width: 360px;
+			max-height: 85vh;
+			overflow-y: auto;
+		}
+		.menu-box h2 { margin-top: 0; color: #ffd700; font-size: 18px; }
+		.menu-row {
+			display: flex;
+			justify-content: space-between;
+			margin: 10px 0;
+			font-size: 14px;
+			align-items: center;
+		}
+		.menu-row select {
+			background: #111; color: #fff;
+			border: 1px solid #777;
+			padding: 8px; border-radius: 6px;
+			font-size: 14px;
+			width: 140px;
+			min-height: 40px;
+		}
+		.menu-row-check {
+			display: flex;
+			align-items: center;
+			gap: 10px;
+			margin: 12px 0;
+			font-size: 14px;
+			text-align: left;
+		}
+		.menu-row-check input[type="checkbox"] {
+			width: 22px;
+			height: 22px;
+			accent-color: #2e8b57;
+		}
+		.menu-hint {
+			font-size: 11px;
+			color: #aaa;
+			margin: -4px 0 8px 32px;
+			text-align: left;
+			line-height: 1.3;
+		}
+		.btn-start {
+			margin-top: 12px;
+			background: #2e8b57; color: #fff;
+			border: none; padding: 14px 28px;
+			font-size: 18px; font-weight: bold;
+			border-radius: 8px; cursor: pointer;
+			width: 100%;
+			min-height: 48px;
+		}
+		.btn-start:active { background: #3cb371; }
+
+		.instructions {
+			display: none; /* esconde no mobile */
+		}
+
+		/* ===== CONTROLES MOBILE ===== */
+		#mobileControls {
+			position: absolute;
+			top: 0; left: 0; width: 100%; height: 100%;
+			pointer-events: none;
+			z-index: 15;
+			display: none; /* mostrado só quando o jogo começa */
+		}
+		#mobileControls.active {
+			display: block;
+		}
+
+		/* ===== ESQUERDA: Joystick + Sprint + Tática ===== */
+		#joystickZone {
+			position: absolute;
+			left: 10px;
+			bottom: 20px;
+			width: 140px;
+			height: 140px;
+			pointer-events: auto;
+			touch-action: none;
+		}
+		#joystickBase {
+			position: absolute;
+			width: 120px;
+			height: 120px;
+			border-radius: 50%;
+			background: rgba(255,255,255,0.12);
+			border: 2px solid rgba(255,255,255,0.35);
+			left: 10px;
+			top: 10px;
+		}
+		#joystickKnob {
+			position: absolute;
+			width: 56px;
+			height: 56px;
+			border-radius: 50%;
+			background: rgba(0, 191, 255, 0.85);
+			border: 2px solid #fff;
+			left: 32px;
+			top: 32px;
+			box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+			transition: none;
+		}
+
+		/* Sprint acima do joystick */
+		#btnSprint {
+			position: absolute;
+			left: 40px;
+			bottom: 170px;
+			width: 68px;
+			height: 68px;
+			border-radius: 50%;
+			border: 2px solid #fff;
+			background: rgba(180, 0, 255, 0.9);
+			color: #fff;
+			font-weight: bold;
+			font-size: 12px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			text-align: center;
+			line-height: 1.1;
+			box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+			pointer-events: auto;
+			touch-action: none;
+			user-select: none;
+			-webkit-user-select: none;
+		}
+		#btnSprint:active, #btnSprint.active {
+			transform: scale(0.92);
+			filter: brightness(1.3);
+			box-shadow: 0 0 12px rgba(200, 100, 255, 0.8);
+		}
+
+		/* Mentalidade / Tática (topo esquerdo) */
+		#mentalityButtons {
+			position: absolute;
+			left: 8px;
+			top: 8px;
+			display: flex;
+			flex-direction: column;
+			gap: 6px;
+			pointer-events: auto;
+			touch-action: none;
+		}
+		.mentality-btn {
+			width: 44px;
+			height: 44px;
+			border-radius: 8px;
+			border: 2px solid #ffd700;
+			background: rgba(30,30,30,0.85);
+			color: #ffd700;
+			font-size: 20px;
+			font-weight: bold;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+		}
+		.mentality-btn:active {
+			background: rgba(80,80,0,0.9);
+		}
+
+		/* ===== DIREITA: Chute, Troca, Cruz, Passe ===== */
+		#actionButtons {
+			position: absolute;
+			right: 8px;
+			bottom: 16px;
+			display: flex;
+			flex-direction: column;
+			align-items: flex-end;
+			gap: 10px;
+			pointer-events: auto;
+			touch-action: none;
+		}
+		.action-btn {
+			width: 64px;
+			height: 64px;
+			border-radius: 50%;
+			border: 2px solid #fff;
+			font-weight: bold;
+			font-size: 12px;
+			color: #fff;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			text-align: center;
+			line-height: 1.1;
+			box-shadow: 0 3px 8px rgba(0,0,0,0.45);
+			user-select: none;
+			-webkit-user-select: none;
+		}
+		.action-btn:active, .action-btn.active {
+			transform: scale(0.92);
+			filter: brightness(1.2);
+		}
+		#btnShoot {
+			background: rgba(255, 69, 0, 0.9);
+			width: 72px;
+			height: 72px;
+			font-size: 13px;
+		}
+		#btnPass {
+			background: rgba(0, 150, 255, 0.9);
+			width: 68px;
+			height: 68px;
+			font-size: 12px;
+		}
+		#btnCross {
+			background: rgba(50, 205, 50, 0.9);
+		}
+		#btnSwitch {
+			background: rgba(255, 215, 0, 0.9);
+			color: #111;
+			width: 56px;
+			height: 56px;
+			font-size: 11px;
+		}
+
+		/* Barras de força (centro inferior) */
+		#powerBars {
+			position: absolute;
+			left: 50%;
+			bottom: 12px;
+			transform: translateX(-50%);
+			display: flex;
+			flex-direction: column;
+			gap: 4px;
+			pointer-events: none;
+			z-index: 16;
+			width: 160px;
+		}
+		.power-bar-container {
+			display: none;
+			background: rgba(0,0,0,0.55);
+			border-radius: 4px;
+			padding: 3px 5px;
+			border: 1px solid rgba(255,255,255,0.3);
+		}
+		.power-bar-container.visible {
+			display: block;
+		}
+		.power-bar-label {
+			font-size: 10px;
+			color: #fff;
+			margin-bottom: 2px;
+			text-align: center;
+			font-weight: bold;
+		}
+		.power-bar-bg {
+			height: 8px;
+			background: rgba(60,60,60,0.9);
+			border-radius: 3px;
+			overflow: hidden;
+		}
+		.power-bar-fill {
+			height: 100%;
+			width: 0%;
+			border-radius: 3px;
+			transition: width 0.05s linear;
+		}
+		#barShoot .power-bar-fill { background: linear-gradient(90deg, #ff4500, #ffd700); }
+		#barPass .power-bar-fill { background: linear-gradient(90deg, #0088ff, #00e5ff); }
+		#barCross .power-bar-fill { background: linear-gradient(90deg, #22c55e, #a3e635); }
+	</style>
+</head>
+<body>
+
+	<h1>Futebol</h1>
+	<div id="topBar">
+		<button id="btnFullscreen" onclick="toggleFullscreen()">Tela Cheia ⛶</button>
+		<div id="scoreBoard">
+			<span class="blue-team">AZUL: <span id="pScore">0</span></span> 
+			&nbsp;&nbsp;x&nbsp;&nbsp; 
+			<span class="red-team">VERMELHO: <span id="eScore">0</span></span>
+		</div>
+		<div id="timerDisplay">00:00</div>
+		<div class="tactical-box">
+			<span class="blue-team">Sua Ofensiva: <strong id="mentalityDisplay">0 (Neutro)</strong></span>
+			<span class="red-team">IA Adversária: <strong id="enemyMentalityDisplay">0 (Neutro)</strong></span>
+		</div>
+	</div>
+	
+	<div id="gameContainer">
+		<canvas id="gameCanvas" width="950" height="600"></canvas>
+		
+		<div id="menuOverlay">
+			<div class="menu-box">
+				<h2 id="menuTitle">Configurações da Partida (11v11)</h2>
+				
+				<div class="menu-row">
+					<label>Duração:</label>
+					<select id="selTime">
+						<option value="60">1 Minuto</option>
+						<option value="120">2 Minutos</option>
+						<option value="180" selected>3 Minutos</option>
+						<option value="300">5 Minutos</option>
+					</select>
+				</div>
+				
+				<div class="menu-row">
+					<label>Velocidade do Jogo:</label>
+					<select id="selSpeed">
+						<option value="0.8">Lento</option>
+						<option value="1.0" selected>Normal</option>
+						<option value="1.3">Rápido</option>
+					</select>
+				</div>
+				<div class="menu-row">
+					<label class="blue-team">Formação Azul:</label>
+					<select id="selFormBlue">
+						<option value="4-4-2" selected>4-4-2</option>
+						<option value="4-3-3">4-3-3</option>
+						<option value="4-5-1">4-5-1</option>
+						<option value="3-4-3">3-4-3</option>
+						<option value="3-5-2">3-5-2</option>
+						<option value="3-1-5-1">3-1-5-1</option>
+						<option value="5-3-2">5-3-2</option>
+						<option value="5-4-1">5-4-1</option>
+						<option value="4-2-2-2">4-2-2-2</option>
+						<option value="4-2-3-1">4-2-3-1</option>
+						<option value="2-4-4">2-4-4</option>
+						<option value="2-5-3">2-5-3</option>
+						<option value="4-3-2-1">4-3-2-1</option>
+					</select>
+				</div>
+
+				<div class="menu-row">
+					<label class="red-team">Formação Vermelha:</label>
+					<select id="selFormRed">
+						<option value="4-4-2" selected>4-4-2</option>
+						<option value="4-3-3">4-3-3</option>
+						<option value="4-5-1">4-5-1</option>
+						<option value="3-4-3">3-4-3</option>
+						<option value="3-5-2">3-5-2</option>
+						<option value="3-1-5-1">3-1-5-1</option>
+						<option value="5-3-2">5-3-2</option>
+						<option value="5-4-1">5-4-1</option>
+						<option value="4-2-2-2">4-2-2-2</option>
+						<option value="4-2-3-1">4-2-3-1</option>
+						<option value="2-4-4">2-4-4</option>
+						<option value="2-5-3">2-5-3</option>
+						<option value="4-3-2-1">4-3-2-1</option>
+					</select>
+				</div>
+
+				<div class="menu-row-check">
+					<input type="checkbox" id="chkDoubleTapSprint">
+					<label for="chkDoubleTapSprint">Toque duplo para correr (mobile)</label>
+				</div>
+				<p class="menu-hint">Toque 2x no centro do joystick, solte, depois empurre na direção. O botão SPRINT fica oculto.</p>
+
+				<button class="btn-start" onclick="startGame()">Começar Jogo</button>
+			</div>
+		</div>
+
+		<!-- Controles Mobile -->
+		<div id="mobileControls">
+			<!-- ESQUERDA: Tática + Sprint + Joystick -->
+			<div id="mentalityButtons">
+				<button class="mentality-btn" id="btnMentUp">▲</button>
+				<button class="mentality-btn" id="btnMentDown">▼</button>
+			</div>
+
+			<button id="btnSprint">SPRINT</button>
+
+			<div id="joystickZone">
+				<div id="joystickBase"></div>
+				<div id="joystickKnob"></div>
+			</div>
+
+			<!-- DIREITA: Troca, Cruz, Passe, Chute -->
+			<div id="actionButtons">
+				<button class="action-btn" id="btnSwitch">TROCA<br>JOG</button>
+				<button class="action-btn" id="btnCross">CRUZ</button>
+				<button class="action-btn" id="btnPass">PASSE<br>DESARME</button>
+				<button class="action-btn" id="btnShoot">CHUTE</button>
+			</div>
+
+			<!-- Barras de força -->
+			<div id="powerBars">
+				<div class="power-bar-container" id="barShoot">
+					<div class="power-bar-label">CHUTE</div>
+					<div class="power-bar-bg"><div class="power-bar-fill" id="fillShoot"></div></div>
+				</div>
+				<div class="power-bar-container" id="barPass">
+					<div class="power-bar-label">PASSE</div>
+					<div class="power-bar-bg"><div class="power-bar-fill" id="fillPass"></div></div>
+				</div>
+				<div class="power-bar-container" id="barCross">
+					<div class="power-bar-label">CRUZAMENTO</div>
+					<div class="power-bar-bg"><div class="power-bar-fill" id="fillCross"></div></div>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<div class="instructions">
+		<p>Controles mobile: Joystick (esquerda) + botões (direita)</p>
+	</div>
+
+	<script>
+		const canvas = document.getElementById("gameCanvas");
+		const ctx = canvas.getContext("2d");
+
+		const fieldWidth = 1400;
+		const fieldHeight = 800;
+		const goalY = 310;
+		const goalH = 180;
+		const AI_SPEED_FACTOR = 0.82; // desacelera a IA um pouco
+
+		let camera = { x: 0, y: 0 };
+		let gameState = "menu";
+		let scoreBlue = 0;
+		let scoreRed = 0;
+		let gameSpeedMult = 1.0;
+		let matchTimeLeft = 0;
+		let lastTick = 0;
+
+		let userMentality = 0;
+		let enemyMentality = 0;
+		let userStillFrames = 0;
+		let team1PassCount = 0;
+		let team2PassCount = 0;
+
+		// ===== CONTROLES MOBILE =====
+		const mobile = {
+			dx: 0,
+			dy: 0,
+			sprintActive: false, // sprint em andamento
+			sprintGrace: 0,     // frames de proteção após ativar
+			sprintArmed: false, // armado pelo toque duplo no centro (modo especial)
+			doubleTapSprint: false, // configuração do menu
+			pass: false,
+			shoot: false,
+			cross: false,
+			switchPlayer: false,
+			active: false
+		};
+
+		// Detecção de toque duplo no centro do joystick
+		let lastCenterTapTime = 0;
+		let centerTapCount = 0;
+		const DOUBLE_TAP_MS = 350;
+		const CENTER_TAP_RADIUS = 28; // px a partir do centro do base
+
+		// Joystick
+		const joyZone = document.getElementById("joystickZone");
+		const joyKnob = document.getElementById("joystickKnob");
+		const joyBase = document.getElementById("joystickBase");
+		let joyTouchId = null;
+		const JOY_MAX = 42; // raio máximo do knob
+
+		let joyTouchStartTime = 0;
+		let joyTouchStartNearCenter = false;
+		let joyTouchStartX = 0;
+		let joyTouchStartY = 0;
+
+		function getJoyCenter() {
+			const rect = joyBase.getBoundingClientRect();
+			return {
+				x: rect.left + rect.width / 2,
+				y: rect.top + rect.height / 2
+			};
+		}
+
+		function updateJoystick(clientX, clientY) {
+			const center = getJoyCenter();
+			let dx = clientX - center.x;
+			let dy = clientY - center.y;
+			const dist = Math.hypot(dx, dy);
+			if (dist > JOY_MAX) {
+				dx = (dx / dist) * JOY_MAX;
+				dy = (dy / dist) * JOY_MAX;
+			}
+			joyKnob.style.left = (32 + dx) + "px";
+			joyKnob.style.top = (32 + dy) + "px";
+			
+			mobile.dx = dist > 8 ? (dx / JOY_MAX) : 0;
+			mobile.dy = dist > 8 ? (dy / JOY_MAX) : 0;
+
+			// Modo toque duplo: se já está armado e empurrou para fora → ativa sprint
+			if (mobile.doubleTapSprint && mobile.sprintArmed) {
+				const mag = Math.hypot(mobile.dx, mobile.dy);
+				if (mag > 0.45) {
+					mobile.sprintActive = true;
+					mobile.sprintGrace = 15;
+					mobile.sprintArmed = false;
+					const sprintBtnEl = document.getElementById("btnSprint");
+					if (sprintBtnEl) sprintBtnEl.classList.add("active");
+				}
+			}
+		}
+
+		function resetJoystick() {
+			joyKnob.style.left = "32px";
+			joyKnob.style.top = "32px";
+			mobile.dx = 0;
+			mobile.dy = 0;
+			joyTouchId = null;
+		}
+
+		function registerCenterTap() {
+			const now = Date.now();
+			if (now - lastCenterTapTime <= DOUBLE_TAP_MS) {
+				centerTapCount++;
+			} else {
+				centerTapCount = 1;
+			}
+			lastCenterTapTime = now;
+
+			if (centerTapCount >= 2) {
+				// Toque duplo no centro → arma o sprint
+				mobile.sprintArmed = true;
+				centerTapCount = 0;
+				// Feedback visual rápido no knob
+				joyKnob.style.boxShadow = "0 0 14px rgba(180,0,255,0.95)";
+				setTimeout(() => {
+					joyKnob.style.boxShadow = "0 2px 8px rgba(0,0,0,0.4)";
+				}, 250);
+			}
+		}
+
+		joyZone.addEventListener("touchstart", (e) => {
+			e.preventDefault();
+			if (joyTouchId !== null) return;
+			const t = e.changedTouches[0];
+			joyTouchId = t.identifier;
+			joyTouchStartTime = Date.now();
+			const center = getJoyCenter();
+			const distFromCenter = Math.hypot(t.clientX - center.x, t.clientY - center.y);
+			joyTouchStartNearCenter = distFromCenter <= CENTER_TAP_RADIUS;
+			joyTouchStartX = t.clientX;
+			joyTouchStartY = t.clientY;
+			updateJoystick(t.clientX, t.clientY);
+		}, { passive: false });
+
+		joyZone.addEventListener("touchmove", (e) => {
+			e.preventDefault();
+			for (let t of e.changedTouches) {
+				if (t.identifier === joyTouchId) {
+					updateJoystick(t.clientX, t.clientY);
+					break;
+				}
+			}
+		}, { passive: false });
+
+		joyZone.addEventListener("touchend", (e) => {
+			e.preventDefault();
+			for (let t of e.changedTouches) {
+				if (t.identifier === joyTouchId) {
+					// Detecta toque rápido no centro (para o modo toque duplo)
+					if (mobile.doubleTapSprint) {
+						const elapsed = Date.now() - joyTouchStartTime;
+						const center = getJoyCenter();
+						const endDist = Math.hypot(t.clientX - center.x, t.clientY - center.y);
+						const moved = Math.hypot(t.clientX - joyTouchStartX, t.clientY - joyTouchStartY);
+						// Toque curto, pouco movimento, começou e terminou perto do centro
+						if (elapsed < 220 && moved < 22 && joyTouchStartNearCenter && endDist <= CENTER_TAP_RADIUS + 10) {
+							registerCenterTap();
+						}
+					}
+					resetJoystick();
+					break;
+				}
+			}
+		}, { passive: false });
+		joyZone.addEventListener("touchcancel", (e) => {
+			resetJoystick();
+		}, { passive: false });
+
+		// Botões de ação (suporte a hold)
+		function setupHoldButton(btnId, key) {
+			const btn = document.getElementById(btnId);
+			let touchId = null;
+
+			const press = (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				if (touchId !== null) return;
+				const t = e.changedTouches ? e.changedTouches[0] : null;
+				touchId = t ? t.identifier : "mouse";
+				mobile[key] = true;
+				btn.classList.add("active");
+			};
+			const release = (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				if (e.changedTouches) {
+					for (let t of e.changedTouches) {
+						if (t.identifier === touchId) {
+							mobile[key] = false;
+							btn.classList.remove("active");
+							touchId = null;
+							break;
+						}
+					}
+				} else {
+					mobile[key] = false;
+					btn.classList.remove("active");
+					touchId = null;
+				}
+			};
+
+			btn.addEventListener("touchstart", press, { passive: false });
+			btn.addEventListener("touchend", release, { passive: false });
+			btn.addEventListener("touchcancel", release, { passive: false });
+			// mouse support for testing
+			btn.addEventListener("mousedown", press);
+			btn.addEventListener("mouseup", release);
+			btn.addEventListener("mouseleave", release);
+		}
+
+		setupHoldButton("btnPass", "pass");
+		setupHoldButton("btnShoot", "shoot");
+		setupHoldButton("btnCross", "cross");
+
+		// Sprint: toque para ativar (não precisa segurar)
+		// Desativa automaticamente ao soltar/reduzir o joystick ou parar
+		(function setupSprintTap() {
+			const btn = document.getElementById("btnSprint");
+			const activate = (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				mobile.sprintActive = true;
+				mobile.sprintGrace = 20; // ~1/3 de segundo de proteção após o toque
+				btn.classList.add("active");
+			};
+			// Só escuta o início do toque — soltar o dedo NÃO cancela o sprint
+			btn.addEventListener("touchstart", activate, { passive: false });
+			btn.addEventListener("mousedown", activate);
+			// Impede que touchend/mouseup no botão faça qualquer coisa
+			btn.addEventListener("touchend", (e) => { e.preventDefault(); e.stopPropagation(); }, { passive: false });
+			btn.addEventListener("touchcancel", (e) => { e.preventDefault(); e.stopPropagation(); }, { passive: false });
+		})();
+
+		// Switch player (tap)
+		document.getElementById("btnSwitch").addEventListener("touchstart", (e) => {
+			e.preventDefault();
+			mobile.switchPlayer = true;
+			document.getElementById("btnSwitch").classList.add("active");
+			setTimeout(() => {
+				mobile.switchPlayer = false;
+				document.getElementById("btnSwitch").classList.remove("active");
+			}, 120);
+		}, { passive: false });
+
+		// Mentalidade
+		document.getElementById("btnMentUp").addEventListener("touchstart", (e) => {
+			e.preventDefault();
+			userMentality = Math.min(2, userMentality + 1);
+			updateMentalityDisplay();
+		}, { passive: false });
+		document.getElementById("btnMentDown").addEventListener("touchstart", (e) => {
+			e.preventDefault();
+			userMentality = Math.max(-2, userMentality - 1);
+			updateMentalityDisplay();
+		}, { passive: false });
+
+		// Teclado ainda funciona (para testes no PC)
+		const keys = {};
+		window.addEventListener("keydown", (e) => { 
+			if(["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.code)) {
+				if(document.fullscreenElement) e.preventDefault(); 
+			}
+			if (e.code === "ArrowUp") {
+				userMentality = Math.min(2, userMentality + 1);
+				updateMentalityDisplay();
+			}
+			if (e.code === "ArrowDown") {
+				userMentality = Math.max(-2, userMentality - 1);
+				updateMentalityDisplay();
+			}
+			keys[e.code] = true; keys[e.key] = true; 
+		});
+		window.addEventListener("keyup", (e) => { keys[e.code] = false; keys[e.key] = false; });
+
+		function updateMentalityDisplay() {
+			const labels = {
+				"-2": "-2 (Retranca Total)",
+				"-1": "-1 (Defensivo)",
+				"0": "0 (Neutro)",
+				"1": "+1 (Ofensivo)",
+				"2": "+2 (Pressão Total)"
+			};
+			document.getElementById("mentalityDisplay").textContent = labels[userMentality];
+			document.getElementById("enemyMentalityDisplay").textContent = labels[enemyMentality];
+		}
+
+		function toggleFullscreen() {
+			if (!document.fullscreenElement) {
+				document.documentElement.requestFullscreen().catch(err => {
+					alert(`Erro ao tentar entrar em tela cheia: ${err.message}`);
+				});
+			} else {
+				if (document.exitFullscreen) {
+					document.exitFullscreen();
+				}
+			}
+		}
+
+		class Player {
+			constructor(x, y, team, role, positionName, lineType = 'mid', isUser = false) {
+				this.baseX = x; this.baseY = y;
+				this.x = x; this.y = y;
+				this.team = team; 
+				this.role = role;					 
+				this.lineType = lineType;	 
+				this.positionName = positionName; 
+				this.isUser = isUser;
+				this.radius = 13;
+				
+				let rawSpeed = 1.3;
+				this.baseSpeed = rawSpeed * gameSpeedMult;
+				this.sprintSpeed = this.baseSpeed * 2.9;
+				this.speed = this.baseSpeed;
+				
+				this.stamina = 100;			 
+				this.matchStamina = 100;	
+				this.isExhausted = false;
+				this.exhaustTimer = 0;
+
+				this.tackleCooldown = 0;	
+				this.tackleHoldFrames = 0; // Acumulador de frames segurando o desarme
+
+				this.passHold = 0;
+				this.crossHold = 0;
+				this.shootDelayTimer = 0;
+				this.isChargingShoot = false;
+				this.ignorePassWhileHeld = false; // Evita passe automático após desarme segurando P
+				
+				this.passDelay = 0;
+				this.pendingPassPower = 0;
+				
+				this.color = team === 1 ? "#00bfff" : "#ff4500";
+				this.facingX = team === 1 ? 1 : -1;
+				this.facingY = 0;
+				this.power = 0;
+				this.stunTime = 0; 
+			}
+
+			setFacing(dx, dy) {
+				if (dx === 0 && dy === 0) return;
+				const len = Math.hypot(dx, dy);
+				this.facingX = dx / len; this.facingY = dy / len;
+			}
+
+			shoot(ball, forceExtra = 0) {
+				if (this.team === 1) team1PassCount = 0;
+				else team2PassCount = 0;
+
+				ball.holder = null;
+				ball.vx = this.facingX * ((6 + this.power + forceExtra) * gameSpeedMult);
+				ball.vy = this.facingY * ((6 + this.power + forceExtra) * gameSpeedMult);
+				ball.cooldown = 15;
+				this.power = 0;
+				this.matchStamina = Math.max(0, this.matchStamina - 0.25); 
+			}
+
+			executeSuccessfulTackle(ball) {
+				this.tackleCooldown = 32; 
+				this.stamina = Math.max(0, this.stamina - 6); 
+				this.matchStamina = Math.max(0, this.matchStamina - 0.18); 
+
+				if (ball.holder && ball.holder.team !== this.team) {
+					let holder = ball.holder;
+					ball.holder = null; 
+					
+					holder.stunTime = 100; 
+
+					if (Math.random() < 0.60) {
+						ball.holder = this;
+						ball.x = this.x + (this.facingX || 1) * 15;
+						ball.y = this.y + (this.facingY || 0) * 15;
+						ball.vx = 0;
+						ball.vy = 0;
+						ball.cooldown = 0;
+						// Se o usuário recuperou a bola segurando P, ignora o passe até soltar a tecla
+						if (this.isUser) {
+							this.ignorePassWhileHeld = true;
+							this.passHold = 0;
+						}
+					} else {
+						ball.vx = this.facingX * (7 * gameSpeedMult); 
+						ball.vy = this.facingY * (7 * gameSpeedMult);
+						ball.cooldown = 15;
+					}
+					
+					if (holder.team === 1) team1PassCount = 0;
+					else team2PassCount = 0;
+				}
+			}
+		}
+
+		let players = [];
+		let ball = { 
+			x: 700, y: 400, radius: 7, vx: 0, vy: 0, friction: 0.97, holder: null, cooldown: 0,
+			inAir: false, targetX: 0, targetY: 0, startX: 0, startY: 0, progress: 0, totalDist: 0, speedAir: 0 
+		};
+		let userPlayer = null;
+
+		function startGame() {
+			let dur = parseInt(document.getElementById("selTime").value);
+			gameSpeedMult = parseFloat(document.getElementById("selSpeed").value);
+			
+			matchTimeLeft = dur;
+			scoreBlue = 0;
+			scoreRed = 0;
+			userMentality = 0;
+			enemyMentality = 0;
+			userStillFrames = 0;
+			team1PassCount = 0;
+			team2PassCount = 0;
+			updateMentalityDisplay();
+
+			document.getElementById("pScore").textContent = "0";
+			document.getElementById("eScore").textContent = "0";
+			
+			document.getElementById("menuOverlay").style.display = "none";
+			document.getElementById("mobileControls").classList.add("active");
+			mobile.active = true;
+			mobile.doubleTapSprint = document.getElementById("chkDoubleTapSprint").checked;
+			mobile.sprintActive = false;
+			mobile.sprintArmed = false;
+			mobile.sprintGrace = 0;
+			centerTapCount = 0;
+
+			// Se modo toque duplo estiver ativo, esconde o botão SPRINT
+			const sprintBtn = document.getElementById("btnSprint");
+			if (sprintBtn) {
+				sprintBtn.style.display = mobile.doubleTapSprint ? "none" : "flex";
+				sprintBtn.classList.remove("active");
+			}
+
+			gameState = "playing";
+			lastTick = Date.now();
+			
+			initPositions(true);
+			// tenta entrar em tela cheia automaticamente no mobile
+			if (window.innerWidth < 900) {
+				setTimeout(() => {
+					try { document.documentElement.requestFullscreen?.(); } catch(e){}
+				}, 300);
+			}
+		}
+
+		function endGame() {
+			gameState = "menu";
+			document.getElementById("mobileControls").classList.remove("active");
+			mobile.active = false;
+			resetJoystick();
+			mobile.sprintActive = false;
+			mobile.sprintGrace = 0;
+			mobile.sprintArmed = false;
+			mobile.pass = false;
+			mobile.shoot = false;
+			mobile.cross = false;
+			centerTapCount = 0;
+			const sprintBtnEl = document.getElementById("btnSprint");
+			if (sprintBtnEl) {
+				sprintBtnEl.classList.remove("active");
+				sprintBtnEl.style.display = "flex";
+			}
+			let msg = "FIM DE JOGO!\n";
+			if (scoreBlue > scoreRed) msg += "Vitória do Time AZUL!";
+			else if (scoreRed > scoreBlue) msg += "Vitória do Time VERMELHO!";
+			else msg += "Empate!";
+			
+			document.getElementById("menuTitle").textContent = msg;
+			document.getElementById("menuOverlay").style.display = "flex";
+		}
+
+		function getSetupForFormation(form, team) {
+			let defX = team === 1 ? 230 : 1170;
+			let dmX = team === 1 ? 440 : 960;
+			let midX = team === 1 ? 680 : 720;
+			let amX = team === 1 ? 930 : 470;
+			let attX = team === 1 ? 1150 : 250;
+
+			if (form === "4-4-2") {
+				return [
+					{x: defX, y: 150, pos: "LD", line: 'def'}, {x: defX, y: 320, pos: "ZGD", line: 'def'}, {x: defX, y: 480, pos: "ZGE", line: 'def'}, {x: defX, y: 650, pos: "LE", line: 'def'},
+					{x: midX, y: 180, pos: "MD", line: 'mid'}, {x: midX, y: 360, pos: "VO1", line: 'mid'}, {x: midX, y: 440, pos: "VO2", line: 'mid'}, {x: midX, y: 620, pos: "ME", line: 'mid'},
+					{x: attX, y: 280, pos: "PD", line: 'att'}, {x: attX, y: 520, pos: "CA", line: 'att'}
+				];
+			} else if (form === "4-3-3") {
+				return [
+					{x: defX, y: 150, pos: "LD", line: 'def'}, {x: defX, y: 320, pos: "ZGD", line: 'def'}, {x: defX, y: 480, pos: "ZGE", line: 'def'}, {x: defX, y: 650, pos: "LE", line: 'def'},
+					{x: midX, y: 220, pos: "MD", line: 'mid'}, {x: midX, y: 400, pos: "VO", line: 'mid'}, {x: midX, y: 580, pos: "ME", line: 'mid'},
+					{x: attX, y: 180, pos: "PD", line: 'att'}, {x: attX, y: 400, pos: "CA", line: 'att'}, {x: attX, y: 620, pos: "PE", line: 'att'}
+				];
+			} else if (form === "4-5-1") {
+				return [
+					{x: defX, y: 150, pos: "LD", line: 'def'}, {x: defX, y: 320, pos: "ZGD", line: 'def'}, {x: defX, y: 480, pos: "ZGE", line: 'def'}, {x: defX, y: 650, pos: "LE", line: 'def'},
+					{x: midX, y: 130, pos: "MD", line: 'mid'}, {x: midX, y: 265, pos: "VO1", line: 'mid'}, {x: midX, y: 400, pos: "VO", line: 'mid'}, {x: midX, y: 535, pos: "VO2", line: 'mid'}, {x: midX, y: 670, pos: "ME", line: 'mid'},
+					{x: attX, y: 400, pos: "CA", line: 'att'}
+				];
+			} else if (form === "3-4-3") {
+				return [
+					{x: defX, y: 200, pos: "LD", line: 'def'}, {x: defX, y: 400, pos: "ZG", line: 'def'}, {x: defX, y: 600, pos: "LE", line: 'def'},
+					{x: midX, y: 180, pos: "MD", line: 'mid'}, {x: midX, y: 360, pos: "VO1", line: 'mid'}, {x: midX, y: 440, pos: "VO2", line: 'mid'}, {x: midX, y: 620, pos: "ME", line: 'mid'},
+					{x: attX, y: 180, pos: "PD", line: 'att'}, {x: attX, y: 400, pos: "CA", line: 'att'}, {x: attX, y: 620, pos: "PE", line: 'att'}
+				];
+			} else if (form === "3-5-2") {
+				return [
+					{x: defX, y: 200, pos: "LD", line: 'def'}, {x: defX, y: 400, pos: "ZG", line: 'def'}, {x: defX, y: 600, pos: "LE", line: 'def'},
+					{x: midX, y: 130, pos: "MD", line: 'mid'}, {x: midX, y: 265, pos: "VO1", line: 'mid'}, {x: midX, y: 400, pos: "VO", line: 'mid'}, {x: midX, y: 535, pos: "VO2", line: 'mid'}, {x: midX, y: 670, pos: "ME", line: 'mid'},
+					{x: attX, y: 280, pos: "PD", line: 'att'}, {x: attX, y: 520, pos: "CA", line: 'att'}
+				];
+			} else if (form === "3-1-5-1") {
+				return [
+					{x: defX, y: 200, pos: "LD", line: 'def'}, {x: defX, y: 400, pos: "ZG", line: 'def'}, {x: defX, y: 600, pos: "LE", line: 'def'},
+					{x: dmX,	y: 400, pos: "VO", line: 'mid'},
+					{x: midX, y: 180, pos: "MD", line: 'mid'}, {x: midX, y: 290, pos: "MO1", line: 'mid'}, {x: midX, y: 510, pos: "MO2", line: 'mid'}, {x: midX, y: 620, pos: "ME", line: 'mid'},
+					{x: amX,	y: 400, pos: "MA", line: 'att'},
+					{x: attX, y: 400, pos: "CA", line: 'att'}
+				];
+			} else if (form === "5-3-2") {
+				return [
+					{x: defX, y: 130, pos: "LD", line: 'def'}, {x: defX, y: 265, pos: "Z1", line: 'def'}, {x: defX, y: 400, pos: "ZG", line: 'def'}, {x: defX, y: 535, pos: "Z2", line: 'def'}, {x: defX, y: 670, pos: "LE", line: 'def'},
+					{x: midX, y: 220, pos: "MD", line: 'mid'}, {x: midX, y: 400, pos: "VO", line: 'mid'}, {x: midX, y: 580, pos: "ME", line: 'mid'},
+					{x: attX, y: 280, pos: "PD", line: 'att'}, {x: attX, y: 520, pos: "CA", line: 'att'}
+				];
+			} else if (form === "5-4-1") {
+				return [
+					{x: defX, y: 130, pos: "LD", line: 'def'}, {x: defX, y: 265, pos: "Z1", line: 'def'}, {x: defX, y: 400, pos: "ZG", line: 'def'}, {x: defX, y: 535, pos: "Z2", line: 'def'}, {x: defX, y: 670, pos: "LE", line: 'def'},
+					{x: midX, y: 180, pos: "MD", line: 'mid'}, {x: midX, y: 360, pos: "VO1", line: 'mid'}, {x: midX, y: 440, pos: "VO2", line: 'mid'}, {x: midX, y: 620, pos: "ME", line: 'mid'},
+					{x: attX, y: 400, pos: "CA", line: 'att'}
+				];
+			} else if (form === "4-2-2-2") {
+				return [
+					{x: defX, y: 150, pos: "LD", line: 'def'}, {x: defX, y: 320, pos: "ZGD", line: 'def'}, {x: defX, y: 480, pos: "ZGE", line: 'def'}, {x: defX, y: 650, pos: "LE", line: 'def'},
+					{x: dmX,	y: 300, pos: "VO1", line: 'mid'}, {x: dmX,	y: 500, pos: "VO2", line: 'mid'},
+					{x: amX,	y: 280, pos: "MD2", line: 'att'}, {x: amX,	y: 520, pos: "ME2", line: 'att'},
+					{x: attX, y: 300, pos: "CA1", line: 'att'}, {x: attX, y: 500, pos: "CA2", line: 'att'}
+				];
+			} else if (form === "4-2-3-1") {
+				return [
+					{x: defX, y: 150, pos: "LD", line: 'def'}, {x: defX, y: 320, pos: "ZGD", line: 'def'}, {x: defX, y: 480, pos: "ZGE", line: 'def'}, {x: defX, y: 650, pos: "LE", line: 'def'},
+					{x: dmX,	y: 300, pos: "VO1", line: 'mid'}, {x: dmX,	y: 500, pos: "VO2", line: 'mid'},
+					{x: amX,	y: 200, pos: "MD",	line: 'att'}, {x: amX,	y: 400, pos: "MO",	line: 'att'}, {x: amX,	y: 600, pos: "ME",	line: 'att'},
+					{x: attX, y: 400, pos: "CA",	line: 'att'}
+				];
+			} else if (form === "2-4-4") {
+				return [
+					{x: defX, y: 280, pos: "ZGD", line: 'def'}, {x: defX, y: 520, pos: "ZGE", line: 'def'},
+					{x: midX, y: 180, pos: "MD",	line: 'mid'}, {x: midX, y: 360, pos: "VO1", line: 'mid'}, {x: midX, y: 440, pos: "VO2", line: 'mid'}, {x: midX, y: 620, pos: "ME",	line: 'mid'},
+					{x: attX, y: 150, pos: "PD1", line: 'att'}, {x: attX, y: 320, pos: "CA1", line: 'att'}, {x: attX, y: 480, pos: "CA2", line: 'att'}, {x: attX, y: 650, pos: "PE1", line: 'att'}
+				];
+			} else if (form === "2-5-3") {
+				return [
+					{x: defX, y: 280, pos: "ZGD", line: 'def'}, {x: defX, y: 520, pos: "ZGE", line: 'def'},
+					{x: midX, y: 130, pos: "MD",	line: 'mid'}, {x: midX, y: 265, pos: "VO1", line: 'mid'}, {x: midX, y: 400, pos: "VO",	line: 'mid'}, {x: midX, y: 535, pos: "VO2", line: 'mid'}, {x: midX, y: 670, pos: "ME",	line: 'mid'},
+					{x: attX, y: 180, pos: "PD",	line: 'att'}, {x: attX, y: 400, pos: "CA",	line: 'att'}, {x: attX, y: 620, pos: "PE",	line: 'att'}
+				];
+			} else if (form === "4-3-2-1") {
+				return [
+					{x: defX, y: 150, pos: "LD", line: 'def'}, {x: defX, y: 320, pos: "ZGD", line: 'def'}, {x: defX, y: 480, pos: "ZGE", line: 'def'}, {x: defX, y: 650, pos: "LE", line: 'def'},
+					{x: midX, y: 220, pos: "MD", line: 'mid'}, {x: midX, y: 400, pos: "VO", line: 'mid'}, {x: midX, y: 580, pos: "ME", line: 'mid'},
+					{x: amX,	y: 300, pos: "MO1", line: 'att'}, {x: amX,	y: 500, pos: "MO2", line: 'att'},
+					{x: attX, y: 400, pos: "CA", line: 'att'}
+				];
+			}
+			return [];
+		}
+
+		function initPositions(resetStamina = false) {
+			let oldData = resetStamina ? [] : players.map(p => ({ matchStamina: p.matchStamina, isExhausted: p.isExhausted, exhaustTimer: p.exhaustTimer }));
+			players = [];
+			
+			let formBlue = document.getElementById("selFormBlue").value;
+			let formRed = document.getElementById("selFormRed").value;
+
+			let blueSetup = getSetupForFormation(formBlue, 1);
+			blueSetup.forEach((item, idx) => {
+				let p = new Player(item.x, item.y, 1, 'field', item.pos, item.line, idx === 0);
+				players.push(p);
+				if (idx === 0) userPlayer = p;
+			});
+			players.push(new Player(40, 400, 1, 'gk', 'GOL', 'def')); 
+
+			let redSetup = getSetupForFormation(formRed, 2);
+			redSetup.forEach(item => {
+				players.push(new Player(item.x, item.y, 2, 'field', item.pos, item.line));
+			});
+			players.push(new Player(1360, 400, 2, 'gk', 'GOL', 'def')); 
+
+			if (oldData.length > 0 && oldData.length === players.length) {
+				for(let i = 0; i < players.length; i++) {
+					players[i].matchStamina = Math.min(100, oldData[i].matchStamina + 15);
+					players[i].isExhausted = oldData[i].isExhausted;
+					players[i].exhaustTimer = oldData[i].exhaustTimer;
+				}
+			}
+
+			ball.x = 700; ball.y = 400;
+			ball.vx = 0; ball.vy = 0; ball.holder = null; ball.cooldown = 0; ball.inAir = false;
+			team1PassCount = 0;
+			team2PassCount = 0;
+		}
+
+		function getClosestFieldPlayer(team, tx, ty) {
+			let closest = null; let minDist = Infinity;
+			players.forEach(p => {
+				if (p.team === team && p.role === 'field' && !p.isUser && !p.isExhausted) {
+					let dist = Math.hypot(p.x - tx, p.y - ty);
+					if (dist < minDist) { minDist = dist; closest = p; }
+				}
+			});
+			return closest;
+		}
+
+		function formatTime(seconds) {
+			let m = Math.floor(seconds / 60);
+			let s = seconds % 60;
+			return (m < 10 ? "0" + m : m) + ":" + (s < 10 ? "0" + s : s);
+		}
+
+		function updatePowerBars() {
+			const barShoot = document.getElementById("barShoot");
+			const barPass = document.getElementById("barPass");
+			const barCross = document.getElementById("barCross");
+			const fillShoot = document.getElementById("fillShoot");
+			const fillPass = document.getElementById("fillPass");
+			const fillCross = document.getElementById("fillCross");
+
+			// Chute
+			if (userPlayer && ball.holder === userPlayer && userPlayer.isChargingShoot && userPlayer.power > 0) {
+				barShoot.classList.add("visible");
+				fillShoot.style.width = Math.min(100, (userPlayer.power / 12) * 100) + "%";
+			} else {
+				barShoot.classList.remove("visible");
+				fillShoot.style.width = "0%";
+			}
+
+			// Passe
+			if (userPlayer && ball.holder === userPlayer && userPlayer.passHold > 0) {
+				barPass.classList.add("visible");
+				const passPct = Math.min(100, (userPlayer.passHold * 0.35 / 6) * 100);
+				fillPass.style.width = passPct + "%";
+			} else {
+				barPass.classList.remove("visible");
+				fillPass.style.width = "0%";
+			}
+
+			// Cruzamento
+			if (userPlayer && ball.holder === userPlayer && userPlayer.crossHold > 0) {
+				barCross.classList.add("visible");
+				// crossHold * 12, max ~480 → normaliza para visual
+				const crossPct = Math.min(100, (userPlayer.crossHold / 25) * 100);
+				fillCross.style.width = crossPct + "%";
+			} else {
+				barCross.classList.remove("visible");
+				fillCross.style.width = "0%";
+			}
+		}
+
+		function triggerCross(p) {
+			if (p.team === 1) team1PassCount = 0;
+			else team2PassCount = 0;
+
+			ball.holder = null;
+			ball.inAir = true;
+			ball.startX = ball.x;
+			ball.startY = ball.y;
+			
+			let holdDist = Math.min(480, 200 + p.crossHold * 12);
+			ball.targetX = p.x + p.facingX * holdDist;
+			ball.targetY = 400 + (Math.random() * 200 - 100); 
+			
+			ball.targetX = Math.max(100, Math.min(fieldWidth - 100, ball.targetX));
+			ball.targetY = Math.max(150, Math.min(fieldHeight - 150, ball.targetY));
+			
+			ball.totalDist = Math.hypot(ball.targetX - ball.startX, ball.targetY - ball.startY);
+			ball.progress = 0;
+			ball.speedAir = 6.0 * gameSpeedMult;
+			ball.cooldown = 15;
+			p.matchStamina = Math.max(0, p.matchStamina - 0.4);
+		}
+
+		function updateEnemyAI() {
+			let scoreDiffRed = scoreRed - scoreBlue; 
+			if (matchTimeLeft < 75) { 
+				if (scoreDiffRed < 0) enemyMentality = 2; 
+				else if (scoreDiffRed > 0) enemyMentality = -2; 
+				else enemyMentality = 1;
+			} else {
+				if (scoreDiffRed < 0) enemyMentality = 1;
+				else if (scoreDiffRed > 0) enemyMentality = -1;
+				else enemyMentality = 0;
+			}
+			document.getElementById("enemyMentalityDisplay").textContent = enemyMentality + (enemyMentality === 2 ? " (Pressão)" : enemyMentality === -2 ? " (Retranca)" : enemyMentality === 1 ? " (Ofensivo)" : enemyMentality === -1 ? " (Defensivo)" : " (Neutro)");
+		}
+
+		function update() {
+			if (gameState !== "playing") return;
+
+			let now = Date.now();
+			if (now - lastTick >= 1000) {
+				matchTimeLeft--;
+				lastTick = now;
+				document.getElementById("timerDisplay").textContent = formatTime(matchTimeLeft);
+				updateEnemyAI();
+
+				players.forEach(p => {
+					if (p.isExhausted) {
+						p.exhaustTimer--;
+						if (p.exhaustTimer <= 0) {
+							p.isExhausted = false;
+							p.matchStamina = 50; 
+							p.stamina = 100;
+							p.x = p.baseX;
+							p.y = p.baseY;
+						}
+					} else {
+						if (p.matchStamina <= 0 && p.role === 'field') {
+							p.isExhausted = true;
+							p.exhaustTimer = 60; 
+							if (ball.holder === p) ball.holder = null;
+
+							if (p.isUser) {
+								let available = players.filter(pl => pl.team === 1 && pl.role === 'field' && !pl.isExhausted);
+								if (available.length > 0) {
+									p.isUser = false;
+									userPlayer = available[0];
+									userPlayer.isUser = true;
+								}
+							}
+						}
+					}
+				});
+
+				if (matchTimeLeft <= 0) {
+					endGame();
+					return;
+				}
+			}
+
+			// Troca de jogador (teclado O ou botão mobile)
+			if (keys["KeyO"] || mobile.switchPlayer) {
+				let fieldTeammates = players.filter(p => p.team === 1 && p.role === 'field' && !p.isExhausted);
+				if (fieldTeammates.length > 0) {
+					let refX = ball.inAir ? ball.targetX : ball.x;
+					let refY = ball.inAir ? ball.targetY : ball.y;
+					fieldTeammates.sort((a, b) => Math.hypot(a.x - refX, a.y - refY) - Math.hypot(b.x - refX, b.y - refY));
+
+					let nextUser = (userPlayer === fieldTeammates[0] && fieldTeammates.length > 1) ? fieldTeammates[1] : fieldTeammates[0];
+					userPlayer.isUser = false;
+					userPlayer = nextUser;
+					userPlayer.isUser = true;
+				}
+				keys["KeyO"] = false;
+				mobile.switchPlayer = false;
+			}
+
+			if (userPlayer.isExhausted) {
+				let available = players.filter(pl => pl.team === 1 && pl.role === 'field' && !pl.isExhausted);
+				if (available.length > 0) {
+					userPlayer = available[0];
+					userPlayer.isUser = true;
+				}
+			}
+
+			if (userPlayer.tackleCooldown > 0) userPlayer.tackleCooldown--;
+			if (userPlayer.stunTime > 0) userPlayer.stunTime--;
+
+			// ===== MOVIMENTO (Joystick + Teclado) =====
+			let dx = 0, dy = 0;
+			if (userPlayer.stunTime <= 0 && !userPlayer.isExhausted) {
+				// Mobile joystick tem prioridade se estiver ativo
+				if (mobile.active && (Math.abs(mobile.dx) > 0.05 || Math.abs(mobile.dy) > 0.05)) {
+					dx = mobile.dx;
+					dy = mobile.dy;
+				} else {
+					if (keys["KeyW"]) dy -= 1;
+					if (keys["KeyS"]) dy += 1;
+					if (keys["KeyA"]) dx -= 1;
+					if (keys["KeyD"]) dx += 1;
+				}
+			}
+
+			userPlayer.setFacing(dx, dy);
+			// Normaliza diagonal no teclado
+			if (!mobile.active && dx !== 0 && dy !== 0) { dx *= 0.7071; dy *= 0.7071; }
+			
+			let isMoving = Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05;
+			
+			// Sprint mobile: toque no botão ativa; cancela só ao soltar/parar o joystick de verdade
+			// Teclado: Shift continua como "segurar"
+			if (mobile.sprintGrace > 0) mobile.sprintGrace--;
+
+			const joyMag = Math.hypot(mobile.dx, mobile.dy);
+			// Só cancela se já passou a proteção do toque E o joystick está quase parado
+			if (mobile.sprintActive && mobile.sprintGrace <= 0 && joyMag < 0.20) {
+				mobile.sprintActive = false;
+				const sprintBtnEl = document.getElementById("btnSprint");
+				if (sprintBtnEl) sprintBtnEl.classList.remove("active");
+			}
+
+			let isSprinting = (
+				(keys["ShiftLeft"] || keys["ShiftRight"] || keys["Shift"] || mobile.sprintActive)
+				&& userPlayer.stamina > 10 && isMoving
+			);
+			
+			let mentalitySpeedBonus = 1 + (userMentality * 0.05);
+			let exhaustFactor = (0.65 + 0.35 * (userPlayer.matchStamina / 100)) * mentalitySpeedBonus;
+
+			if (isSprinting) {
+				userPlayer.speed = userPlayer.sprintSpeed * exhaustFactor;
+				userPlayer.stamina = Math.max(0, userPlayer.stamina - 0.7);
+				userPlayer.matchStamina = Math.max(0, userPlayer.matchStamina - 0.018);
+			} else {
+				userPlayer.speed = userPlayer.baseSpeed * exhaustFactor;
+				if (!isMoving) {
+					userPlayer.stamina = Math.min(100, userPlayer.stamina + 1.2); 
+				} else {
+					userPlayer.stamina = Math.min(100, userPlayer.stamina + 0.6); 
+					userPlayer.matchStamina = Math.max(0, userPlayer.matchStamina - 0.0035);
+				}
+			}
+
+			userPlayer.x += dx * userPlayer.speed;
+			userPlayer.y += dy * userPlayer.speed;
+
+			// ===== CHUTE (botão ou teclado) =====
+			let shootIsPressed = keys["Space"] || keys["KeyK"] || mobile.shoot;
+			if (ball.holder === userPlayer) {
+				if (shootIsPressed) {
+					if (!userPlayer.isChargingShoot) {
+						userPlayer.isChargingShoot = true;
+						userPlayer.shootDelayTimer = 10; 
+						userPlayer.power = 0;
+					} else {
+						if (userPlayer.shootDelayTimer > 0) {
+							userPlayer.shootDelayTimer--;
+						} else {
+							userPlayer.power = Math.min(userPlayer.power + 0.4, 12);
+						}
+					}
+				} else {
+					if (userPlayer.isChargingShoot) {
+						if (userPlayer.shootDelayTimer <= 0) {
+							userPlayer.shoot(ball);
+						}
+						userPlayer.isChargingShoot = false;
+						userPlayer.power = 0;
+					}
+				}
+			} else {
+				userPlayer.isChargingShoot = false;
+				userPlayer.power = 0;
+			}
+			
+			// ===== PASSE / DESARME (botão ou teclado) =====
+			let pIsPressed = keys["KeyP"] || mobile.pass;
+			if (ball.holder === userPlayer) {
+				if (pIsPressed) {
+					if (!userPlayer.ignorePassWhileHeld) {
+						userPlayer.passHold = (userPlayer.passHold || 0) + 1;
+					}
+				} else {
+					userPlayer.ignorePassWhileHeld = false;
+					if (userPlayer.passHold > 0) {
+						userPlayer.passDelay = 7;
+						userPlayer.pendingPassPower = Math.min(6, userPlayer.passHold * 0.35);
+						userPlayer.passHold = 0;
+					}
+				}
+			} else {
+				userPlayer.passHold = 0;
+				if (pIsPressed && userPlayer.tackleCooldown <= 0) {
+					if (ball.holder && ball.holder.team !== userPlayer.team) {
+						let dist = Math.hypot(userPlayer.x - ball.holder.x, userPlayer.y - ball.holder.y);
+						if (dist < userPlayer.radius + ball.holder.radius + 22) {
+							userPlayer.tackleHoldFrames++;
+							if (userPlayer.tackleHoldFrames >= 14) {
+								userPlayer.executeSuccessfulTackle(ball);
+								userPlayer.tackleHoldFrames = 0;
+							}
+						} else {
+							userPlayer.tackleHoldFrames = 0;
+						}
+					} else {
+						userPlayer.tackleHoldFrames = 0;
+					}
+				} else {
+					userPlayer.tackleHoldFrames = 0;
+				}
+			}
+
+			if (userPlayer.passDelay > 0) {
+				userPlayer.passDelay--;
+				if (userPlayer.passDelay === 0 && ball.holder === userPlayer) {
+					team1PassCount++;
+					userPlayer.shoot(ball, userPlayer.pendingPassPower);
+				}
+			}
+
+			// ===== CRUZAMENTO =====
+			let lIsPressed = keys["KeyL"] || mobile.cross;
+			if (ball.holder === userPlayer) {
+				if (lIsPressed) {
+					userPlayer.crossHold = (userPlayer.crossHold || 0) + 1;
+				} else {
+					if (userPlayer.crossHold > 0) {
+						triggerCross(userPlayer);
+						userPlayer.crossHold = 0;
+					}
+				}
+			} else {
+				userPlayer.crossHold = 0;
+			}
+
+			// ===== BARRAS DE FORÇA (UI) =====
+			updatePowerBars();
+
+			let targetCamX = userPlayer.x - canvas.width / 2;
+			let targetCamY = userPlayer.y - canvas.height / 2;
+			camera.x += (targetCamX - camera.x) * 0.1;
+			camera.y += (targetCamY - camera.y) * 0.1;
+
+			camera.x = Math.max(0, Math.min(fieldWidth - canvas.width, camera.x));
+			camera.y = Math.max(0, Math.min(fieldHeight - canvas.height, camera.y));
+
+			let chaserRed = getClosestFieldPlayer(2, ball.x, ball.y);
+			let chaserBlue = getClosestFieldPlayer(1, ball.x, ball.y);
+
+			players.forEach(p => {
+				if (p.isExhausted) {
+					p.x = p.team === 1 ? 400 + (p.baseY * 0.1) : 1000 - (p.baseY * 0.1);
+					p.y = p.team === 1 ? -35 : fieldHeight + 35;
+					return;
+				}
+
+				if (p.stunTime > 0) p.stunTime--; 
+				if (p.tackleCooldown > 0) p.tackleCooldown--;
+				if (p.isUser) return;
+
+				let wantSprint = false;
+				let pMentality = p.team === 1 ? userMentality : enemyMentality;
+				let pExhaustFactor = (0.75 + 0.25 * (p.matchStamina / 100)) * (1 + (pMentality * 0.05));
+
+				if (p.stamina < 30 || p.matchStamina < 20) {
+					wantSprint = false;
+				}
+
+				// --- GOLEIRO INTELIGENTE ---
+				if (p.role === 'gk') {
+					let isMyHalf = p.team === 1 ? ball.x < 750 : ball.x > 650;
+					let distToBall = Math.hypot(ball.x - p.x, ball.y - p.y);
+					
+					if (ball.holder === p) {
+						p.holdTime = (p.holdTime || 0) + 1;
+						if (p.holdTime > 25) {
+							let teammates = players.filter(pl => pl.team === p.team && pl !== p && pl.role === 'field' && !pl.isExhausted);
+							if (teammates.length > 0) {
+								teammates.sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y));
+								let target = teammates[0];
+								let dx = target.x - p.x;
+								let dy = target.y - p.y;
+								p.setFacing(dx, dy);
+								
+								let distToTarget = Math.hypot(dx, dy);
+								p.power = Math.min(8, Math.max(3, distToTarget * 0.03));
+								p.shoot(ball);
+							} else {
+								p.setFacing(p.team === 1 ? 1 : -1, 0);
+								p.power = 6;
+								p.shoot(ball);
+							}
+							p.holdTime = 0;
+						}
+					} else {
+						let lineGoalX = p.team === 1 ? 30 : 1370;
+						let targetY = Math.max(goalY + 10, Math.min(goalY + goalH - 10, ball.y));
+						let targetX = lineGoalX;
+
+						if (isMyHalf && distToBall < 350 && !ball.inAir) {
+							targetX = p.team === 1 ? Math.min(150, ball.x - 15) : Math.max(1250, ball.x + 15);
+							wantSprint = true;
+						}
+
+						if (p.y < targetY - 2) p.y += p.speed * (wantSprint ? 1.15 : 1.0);
+						else if (p.y > targetY + 2) p.y -= p.speed * (wantSprint ? 1.15 : 1.0);
+						
+						if (p.x < targetX - 2) p.x += p.speed * (wantSprint ? 1.15 : 1.0);
+						else if (p.x > targetX + 2) p.x -= p.speed * (wantSprint ? 1.15 : 1.0);
+						
+						p.setFacing(p.team === 1 ? 1 : -1, 0);
+					}
+					
+					if (wantSprint) {
+						p.stamina = Math.max(0, p.stamina - 0.5);
+						p.matchStamina = Math.max(0, p.matchStamina - 0.003);
+					} else {
+						p.stamina = Math.min(100, p.stamina + 0.8);
+						p.matchStamina = Math.max(0, p.matchStamina - 0.0008);
+					}
+					return;
+				}
+
+				if (p.stunTime > 0) return;
+
+				let isWing = p.y < 250 || p.y > 550;
+				let isAttackingHalf = p.team === 1 ? p.x > 800 : p.x < 600;
+				if (ball.holder === p && isWing && isAttackingHalf && Math.random() < 0.07 && !ball.inAir) {
+					triggerCross(p);
+					return;
+				}
+
+				if (ball.holder === p) {
+					let currentTeamPasses = p.team === 1 ? team1PassCount : team2PassCount;
+					let nearestOpp = p.markTarget || getClosestFieldPlayer(p.team === 1 ? 2 : 1, p.x, p.y);
+					let distToOpp = nearestOpp ? Math.hypot(p.x - nearestOpp.x, p.y - nearestOpp.y) : Infinity;
+					
+					let toGoalX = p.team === 1 ? fieldWidth : 0;
+					let distToGoal = Math.hypot(toGoalX - p.x, 400 - p.y);
+
+					let shouldPass = currentTeamPasses < 1 && distToOpp < 90 && p.lineType !== 'att' && Math.random() < 0.03;
+					
+					let teammates = players.filter(pl => pl.team === p.team && pl !== p && pl.role === 'field' && !pl.isExhausted);
+					if (shouldPass && teammates.length > 0) {
+						teammates.sort((a, b) => {
+							let scoreA = p.team === 1 ? a.x - p.x : p.x - a.x;
+							let scoreB = p.team === 1 ? b.x - p.x : p.x - a.x;
+							return scoreB - scoreA;
+						});
+						let target = teammates[0];
+						let dx = target.x - p.x;
+						let dy = target.y - p.y;
+						p.setFacing(dx, dy);
+						p.power = 3.5;
+						if (p.team === 1) team1PassCount++; else team2PassCount++;
+						p.shoot(ball, 2.0);
+						return;
+					}
+
+					wantSprint = true;
+					let angle = Math.atan2(400 - p.y, toGoalX - p.x);
+					p.x += Math.cos(angle) * p.speed * 1.1;
+					p.y += Math.sin(angle) * p.speed * 1.1;
+					p.setFacing(Math.cos(angle), Math.sin(angle));
+
+					if (distToGoal < 520 && (Math.random() < 0.20 || currentTeamPasses >= 1 || distToOpp < 70)) { 
+						p.power = 9 + Math.random() * 3;
+						p.shoot(ball); 
+					}
+					
+					p.stamina = Math.max(0, p.stamina - 0.5);
+					p.matchStamina = Math.max(0, p.matchStamina - 0.008);
+					return;
+				}
+
+				if (ball.holder && ball.holder.team !== p.team) {
+					let distToHolder = Math.hypot(ball.holder.x - p.x, ball.holder.y - p.y);
+					if (distToHolder < 220) {
+						wantSprint = true;
+						let angle = Math.atan2(ball.holder.y - p.y, ball.holder.x - p.x);
+						p.x += Math.cos(angle) * p.speed * 1.08;
+						p.y += Math.sin(angle) * p.speed * 1.08;
+						p.setFacing(Math.cos(angle), Math.sin(angle));
+
+						if (distToHolder < p.radius + ball.holder.radius + 22) {
+							p.tackleHoldFrames++;
+							if (p.tackleHoldFrames >= 30 && p.tackleCooldown <= 0) {
+								p.executeSuccessfulTackle(ball);
+								p.tackleHoldFrames = 0;
+							}
+						} else {
+							p.tackleHoldFrames = 0;
+						}
+						
+						p.stamina = Math.max(0, p.stamina - 0.6);
+						p.matchStamina = Math.max(0, p.matchStamina - 0.007);
+						return;
+					}
+				}
+				p.tackleHoldFrames = 0;
+
+				let chaser = p.team === 1 ? chaserBlue : chaserRed;
+				
+				if (p === chaser && (!ball.holder && !ball.inAir && ball.holder?.team !== p.team)) {
+					wantSprint = true;
+					let angle = Math.atan2(ball.y - p.y, ball.x - p.x);
+					p.x += Math.cos(angle) * p.speed;
+					p.y += Math.sin(angle) * p.speed;
+					p.setFacing(Math.cos(angle), Math.sin(angle));
+					
+					p.stamina = Math.max(0, p.stamina - 0.5);
+					p.matchStamina = Math.max(0, p.matchStamina - 0.005);
+				} else {
+					 wantSprint = false;
+					 let mentalityShift = p.team === 1 ? (userMentality * 40) : (-enemyMentality * 40);
+					 let targetX = p.baseX + mentalityShift; 
+					 let targetY = p.baseY;
+
+					 if (ball.holder && ball.holder.team === p.team) {
+						 let avanco = p.team === 1 ? Math.max(0, ball.x - 400) : Math.min(0, ball.x - 1000);
+						 targetX += avanco * 0.4;
+					 } else {
+						 let recuo = p.team === 1 ? Math.min(ball.x - 100, p.baseX) : Math.max(ball.x + 100, p.baseX);
+						 targetX = recuo + mentalityShift;
+					 }
+
+					 if (p.team === 1) {
+						 if (p.lineType === 'def') targetX = Math.max(80, Math.min(680, targetX));
+						 else if (p.lineType === 'mid') targetX = Math.max(300, Math.min(1050, targetX));
+						 else if (p.lineType === 'att') targetX = Math.max(600, Math.min(1360, targetX));
+					 } else {
+						 if (p.lineType === 'def') targetX = Math.max(720, Math.min(1320, targetX));
+						 else if (p.lineType === 'mid') targetX = Math.max(350, Math.min(1100, targetX));
+						 else if (p.lineType === 'att') targetX = Math.max(40, Math.min(800, targetX));
+					 }
+
+					 targetY = Math.max(50, Math.min(750, targetY));
+
+					 let distToTarget = Math.hypot(targetX - p.x, targetY - p.y);
+					 if (distToTarget > 15) {
+						 let angle = Math.atan2(targetY - p.y, targetX - p.x);
+						 p.x += Math.cos(angle) * p.speed;
+						 p.y += Math.sin(angle) * p.speed;
+						 p.setFacing(Math.cos(angle), Math.sin(angle));
+						 
+						 p.stamina = Math.min(100, p.stamina + 0.6);
+						 p.matchStamina = Math.max(0, p.matchStamina - 0.0015);
+					 } else {
+						 p.stamina = Math.min(100, p.stamina + 1.2);
+						 p.matchStamina = Math.max(0, p.matchStamina - 0.0005);
+					 }
+				}
+
+				if (wantSprint) {
+					p.speed = p.sprintSpeed * pExhaustFactor * AI_SPEED_FACTOR;
+				} else {
+					p.speed = p.baseSpeed * pExhaustFactor * AI_SPEED_FACTOR;
+				}
+			});
+
+			for(let i=0; i<players.length; i++) {
+				if (players[i].isExhausted) continue;
+				players[i].x = Math.max(players[i].radius, Math.min(fieldWidth - players[i].radius, players[i].x));
+				players[i].y = Math.max(players[i].radius, Math.min(fieldHeight - players[i].radius, players[i].y));
+
+				for(let j=i+1; j<players.length; j++) {
+					if (players[j].isExhausted) continue;
+					let p1 = players[i]; let p2 = players[j];
+					let dx = p2.x - p1.x; let dy = p2.y - p1.y;
+					let dist = Math.hypot(dx, dy);
+					let minD = p1.radius + p2.radius;
+					
+					if(dist < minD && dist > 0) {
+						let overlap = minD - dist;
+						let nx = dx / dist; let ny = dy / dist;
+						p1.x -= nx * overlap / 2; p1.y -= ny * overlap / 2;
+						p2.x += nx * overlap / 2; p2.y += ny * overlap / 2;
+					}
+				}
+			}
+
+			if (ball.cooldown > 0) ball.cooldown--;
+
+			if (ball.inAir) {
+				ball.progress += ball.speedAir;
+				let t = Math.min(1, ball.progress / ball.totalDist);
+				ball.x = ball.startX + (ball.targetX - ball.startX) * t;
+				ball.y = ball.startY + (ball.targetY - ball.startY) * t;
+				
+				if (t >= 1) {
+					ball.inAir = false;
+					ball.vx = 0; ball.vy = 0; ball.cooldown = 10;
+				}
+			} else if (ball.holder) {
+				ball.x = ball.holder.x + ball.holder.facingX * (ball.holder.radius + ball.radius + 2);
+				ball.y = ball.holder.y + ball.holder.facingY * (ball.holder.radius + ball.radius + 2);
+				ball.vx = 0; ball.vy = 0;
+			} else {
+				ball.x += ball.vx; ball.y += ball.vy;
+				ball.vx *= ball.friction; ball.vy *= ball.friction;
+
+				if (ball.y - ball.radius <= 0) { ball.vy *= -1; ball.y = ball.radius; }
+				if (ball.y + ball.radius >= fieldHeight) { ball.vy *= -1; ball.y = fieldHeight - ball.radius; }
+
+				if (ball.x - ball.radius <= 0) {
+					if (ball.y >= goalY && ball.y <= goalY + goalH) {
+						scoreRed++; document.getElementById("eScore").textContent = scoreRed; initPositions(); return;
+					} else { ball.vx *= -1; ball.x = ball.radius; team1PassCount = 0; team2PassCount = 0; }
+				}
+				if (ball.x + ball.radius >= fieldWidth) {
+					if (ball.y >= goalY && ball.y <= goalY + goalH) {
+						scoreBlue++; document.getElementById("pScore").textContent = scoreBlue; initPositions(); return;
+					} else { ball.vx *= -1; ball.x = fieldWidth - ball.radius; team1PassCount = 0; team2PassCount = 0; }
+				}
+
+				players.forEach(p => {
+					if (!p.isExhausted && ball.cooldown <= 0 && p.stunTime <= 0) {
+						let distToBall = Math.hypot(p.x - ball.x, p.y - ball.y);
+						if (distToBall < p.radius + ball.radius + 4) { 
+							if (ball.holder && ball.holder.team !== p.team) {
+								if (p.team === 1) team1PassCount = 0; else team2PassCount = 0;
+							}
+							ball.holder = p; 
+							ball.cooldown = 5; 
+						}
+					}
+				});
+			}
+		}
+
+		function draw() {
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+			ctx.save();
+			ctx.translate(-camera.x, -camera.y);
+
+			ctx.strokeStyle = "rgba(255, 255, 255, 0.4)"; ctx.lineWidth = 3;
+			ctx.strokeRect(0, 0, fieldWidth, fieldHeight);
+
+			ctx.beginPath(); ctx.moveTo(fieldWidth / 2, 0); ctx.lineTo(fieldWidth / 2, fieldHeight); ctx.stroke();
+			ctx.beginPath(); ctx.arc(fieldWidth / 2, fieldHeight / 2, 80, 0, Math.PI * 2); ctx.stroke();
+
+			ctx.strokeRect(0, 200, 180, 400); 
+			ctx.strokeRect(fieldWidth - 180, 200, 180, 400); 
+
+			ctx.fillStyle = "#fff"; ctx.fillRect(0, goalY, 15, goalH); ctx.fillRect(fieldWidth - 15, goalY, 15, goalH); 
+			ctx.fillStyle = "#222"; ctx.fillRect(0, goalY + 5, 10, goalH - 10); ctx.fillRect(fieldWidth - 10, goalY + 5, 10, goalH - 10);
+
+			if (gameState === "playing") {
+				if (ball.inAir) {
+					ctx.beginPath();
+					ctx.arc(ball.targetX, ball.targetY, 16, 0, Math.PI * 2);
+					ctx.strokeStyle = "#ffd700";
+					ctx.lineWidth = 3;
+					ctx.setLineDash([4, 4]);
+					ctx.stroke();
+					ctx.setLineDash([]);
+				}
+
+				players.forEach(p => {
+					if (p.isExhausted) {
+						ctx.beginPath(); ctx.arc(p.x, p.y, p.radius * 0.8, 0, Math.PI * 2);
+						ctx.fillStyle = p.color; ctx.globalAlpha = 0.5; ctx.fill(); ctx.globalAlpha = 1.0;
+						ctx.strokeStyle = "#ff0000"; ctx.lineWidth = 2; ctx.stroke();
+						
+						ctx.font = "bold 9px 'Segoe UI', Tahoma";
+						ctx.textAlign = "center";
+						ctx.fillStyle = "#ff4500";
+						ctx.fillText(`BANCO (${p.exhaustTimer}s)`, p.x, p.y - 12);
+						return;
+					}
+
+					if (p.isUser) {
+						ctx.beginPath(); ctx.arc(p.x, p.y, p.radius + 5, 0, Math.PI * 2);
+						ctx.fillStyle = "rgba(255, 215, 0, 0.5)"; ctx.fill();
+					}
+
+					ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+					ctx.globalAlpha = p.stunTime > 0 ? 0.4 : 1.0; 
+					ctx.fillStyle = p.color; ctx.fill(); ctx.globalAlpha = 1.0;
+					
+					ctx.lineWidth = 2; ctx.strokeStyle = p.tackleCooldown > 0 ? "#555" : "#000"; ctx.stroke();
+
+					ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.facingX * p.radius, p.y + p.facingY * p.radius);
+					ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke();
+
+					ctx.font = "bold 10px 'Segoe UI', Tahoma";
+					ctx.textAlign = "center";
+					ctx.fillStyle = p.isUser ? "#ffd700" : "#ffffff";
+					ctx.fillText(p.positionName, p.x, p.y - p.radius - 8);
+
+					if (p.isUser && p.power > 0) {
+						ctx.fillStyle = "yellow"; ctx.fillRect(p.x - 15, p.y - 42, (p.power / 12) * 30, 4);
+					}
+
+					if (p.tackleHoldFrames > 0) {
+						ctx.fillStyle = "rgba(0, 0, 0, 0.6)"; ctx.fillRect(p.x - 12, p.y - p.radius - 22, 24, 4);
+						ctx.fillStyle = "#00ffff"; ctx.fillRect(p.x - 12, p.y - p.radius - 22, (p.tackleHoldFrames / 30) * 24, 4);
+						ctx.strokeStyle = "#fff"; ctx.lineWidth = 1; ctx.strokeRect(p.x - 12, p.y - p.radius - 22, 24, 4);
+					}
+
+					if (p.stamina < 100 || p.matchStamina < 100 || p.isUser) {
+						ctx.fillStyle = "rgba(255, 0, 0, 0.6)"; ctx.fillRect(p.x - 12, p.y + p.radius + 4, 24, 3);
+						ctx.fillStyle = "rgba(0, 255, 0, 0.9)"; ctx.fillRect(p.x - 12, p.y + p.radius + 4, (p.stamina / 100) * 24, 3);
+						
+						ctx.fillStyle = "rgba(100, 100, 100, 0.6)"; ctx.fillRect(p.x - 12, p.y + p.radius + 8, 24, 3);
+						ctx.fillStyle = "rgba(255, 140, 0, 0.9)"; ctx.fillRect(p.x - 12, p.y + p.radius + 8, (p.matchStamina / 100) * 24, 3);
+
+						ctx.strokeStyle = "black"; ctx.lineWidth = 1;
+						ctx.strokeRect(p.x - 12, p.y + p.radius + 4, 24, 3); ctx.strokeRect(p.x - 12, p.y + p.radius + 8, 24, 3);
+					}
+				});
+
+				ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+				ctx.fillStyle = "#fff"; ctx.fill(); ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.stroke();
+			}
+
+			ctx.restore();
+		}
+
+		function resizeCanvas() {
+			// Mantém proporção aproximada do campo, mas adapta à tela
+			const maxW = window.innerWidth - 4;
+			const maxH = window.innerHeight - 70; // espaço para topBar
+			let w = 950;
+			let h = 600;
+			const ratio = 950 / 600;
+			if (maxW / maxH > ratio) {
+				h = Math.min(600, maxH);
+				w = h * ratio;
+			} else {
+				w = Math.min(950, maxW);
+				h = w / ratio;
+			}
+			canvas.width = Math.floor(w);
+			canvas.height = Math.floor(h);
+			canvas.style.width = w + "px";
+			canvas.style.height = h + "px";
+		}
+
+		window.addEventListener("resize", resizeCanvas);
+		window.addEventListener("orientationchange", () => setTimeout(resizeCanvas, 200));
+
+		// Previne scroll e zoom indesejado no mobile
+		document.addEventListener("touchmove", (e) => {
+			if (gameState === "playing") e.preventDefault();
+		}, { passive: false });
+
+		function gameLoop() {
+			update();
+			draw();
+			requestAnimationFrame(gameLoop);
+		}
+
+		resizeCanvas();
+		draw();
+		gameLoop();
+	</script>
+</body>
+</html>

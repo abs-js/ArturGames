@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecionando...</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #111;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        .box {
+            padding: 30px;
+            border-radius: 10px;
+            background: #222;
+            box-shadow: 0 0 15px rgba(0,0,0,.5);
+        }
+
+        #contador {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>Redirecionando...</h2>
+    <p>O game que você deseja abrir está em <strong>soccer.html</strong>.</p>
+    <p>Você será redirecionado para lá em <span id="contador">5</span> segundos.</p>
+</div>
+
+<script>
+    let segundos = 5;
+    const contador = document.getElementById("contador");
+
+    const intervalo = setInterval(() => {
+        segundos--;
+        contador.textContent = segundos;
+
+        if (segundos <= 0) {
+            clearInterval(intervalo);
+            window.location.href = "https://1freehosting.com/s/arturgames/soccer.html";
+        }
+    }, 1000);
+</script>
+
+</body>
+</html>
