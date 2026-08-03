@@ -463,11 +463,24 @@
 					</select>
 				</div>
 
-				<div class="menu-row-check">
-					<input type="checkbox" id="chkDoubleTapSprint">
-					<label for="chkDoubleTapSprint">Toque duplo para correr (mobile)</label>
+				<div class="menu-row">
+					<label>Dificuldade:</label>
+					<select id="selDifficulty">
+						<option value="easy">Fácil</option>
+						<option value="medium" selected>Médio</option>
+						<option value="hard">Difícil</option>
+					</select>
 				</div>
-				<p class="menu-hint">Toque 2x no centro do joystick, solte, depois empurre na direção. O botão SPRINT fica oculto.</p>
+
+				<div class="menu-row">
+					<label>Modo Corrida:</label>
+					<select id="selSprintMode">
+						<option value="hold">1. Segurar Sprint</option>
+						<option value="tap" selected>2. Tocar em Sprint</option>
+						<option value="doubletap">3. Toque duplo no joystick</option>
+					</select>
+				</div>
+				<p class="menu-hint" id="sprintModeHint">Toque no botão SPRINT para correr; solte o joystick para parar.</p>
 
 				<button class="btn-start" onclick="startGame()">Começar Jogo</button>
 			</div>
@@ -526,7 +539,15 @@
 		const fieldHeight = 800;
 		const goalY = 310;
 		const goalH = 180;
-		const AI_SPEED_FACTOR = 0.82; // desacelera a IA um pouco
+
+		// Dificuldade (ajustada em startGame)
+		let AI_SPEED_FACTOR = 0.82;
+		let difficulty = "medium";
+		let aiShootChance = 0.20;
+		let aiPressDist = 220;
+		let aiPassChance = 0.03;
+		let aiMistakeChance = 0.08;
+		let gkReactionBonus = 1.0;
 
 		let camera = { x: 0, y: 0 };
 		let gameState = "menu";
@@ -546,10 +567,12 @@
 		const mobile = {
 			dx: 0,
 			dy: 0,
-			sprintActive: false, // sprint em andamento
-			sprintGrace: 0,     // frames de proteção após ativar
-			sprintArmed: false, // armado pelo toque duplo no centro (modo especial)
-			doubleTapSprint: false, // configuração do menu
+			sprintActive: false, // sprint em andamento (modos tap / doubletap)
+			sprintBtn: false,   // botão pressionado (modo hold)
+			sprintGrace: 0,
+			sprintArmed: false,
+			sprintArmedUntil: 0, // timestamp de expiração do armado
+			sprintMode: "tap",  // hold | tap | doubletap
 			pass: false,
 			shoot: false,
 			cross: false,
@@ -598,15 +621,19 @@
 			mobile.dx = dist > 8 ? (dx / JOY_MAX) : 0;
 			mobile.dy = dist > 8 ? (dy / JOY_MAX) : 0;
 
-			// Modo toque duplo: se já está armado e empurrou para fora → ativa sprint
-			if (mobile.doubleTapSprint && mobile.sprintArmed) {
-				const mag = Math.hypot(mobile.dx, mobile.dy);
-				if (mag > 0.45) {
-					mobile.sprintActive = true;
-					mobile.sprintGrace = 15;
+			// Modo toque duplo: se armado e empurrou para fora → ativa sprint
+			if (mobile.sprintMode === "doubletap" && mobile.sprintArmed) {
+				if (Date.now() > mobile.sprintArmedUntil) {
 					mobile.sprintArmed = false;
-					const sprintBtnEl = document.getElementById("btnSprint");
-					if (sprintBtnEl) sprintBtnEl.classList.add("active");
+				} else {
+					const mag = Math.hypot(mobile.dx, mobile.dy);
+					if (mag > 0.45) {
+						mobile.sprintActive = true;
+						mobile.sprintGrace = 15;
+						mobile.sprintArmed = false;
+						const sprintBtnEl = document.getElementById("btnSprint");
+						if (sprintBtnEl) sprintBtnEl.classList.add("active");
+					}
 				}
 			}
 		}
@@ -629,10 +656,9 @@
 			lastCenterTapTime = now;
 
 			if (centerTapCount >= 2) {
-				// Toque duplo no centro → arma o sprint
 				mobile.sprintArmed = true;
+				mobile.sprintArmedUntil = now + 2500; // expira em 2.5s
 				centerTapCount = 0;
-				// Feedback visual rápido no knob
 				joyKnob.style.boxShadow = "0 0 14px rgba(180,0,255,0.95)";
 				setTimeout(() => {
 					joyKnob.style.boxShadow = "0 2px 8px rgba(0,0,0,0.4)";
@@ -668,13 +694,12 @@
 			e.preventDefault();
 			for (let t of e.changedTouches) {
 				if (t.identifier === joyTouchId) {
-					// Detecta toque rápido no centro (para o modo toque duplo)
-					if (mobile.doubleTapSprint) {
+					// Detecta toque rápido no centro (modo toque duplo)
+					if (mobile.sprintMode === "doubletap") {
 						const elapsed = Date.now() - joyTouchStartTime;
 						const center = getJoyCenter();
 						const endDist = Math.hypot(t.clientX - center.x, t.clientY - center.y);
 						const moved = Math.hypot(t.clientX - joyTouchStartX, t.clientY - joyTouchStartY);
-						// Toque curto, pouco movimento, começou e terminou perto do centro
 						if (elapsed < 220 && moved < 22 && joyTouchStartNearCenter && endDist <= CENTER_TAP_RADIUS + 10) {
 							registerCenterTap();
 						}
@@ -734,24 +759,73 @@
 		setupHoldButton("btnShoot", "shoot");
 		setupHoldButton("btnCross", "cross");
 
-		// Sprint: toque para ativar (não precisa segurar)
-		// Desativa automaticamente ao soltar/reduzir o joystick ou parar
-		(function setupSprintTap() {
+		// Sprint: comportamento depende do modo (hold / tap / doubletap)
+		(function setupSprintButton() {
 			const btn = document.getElementById("btnSprint");
-			const activate = (e) => {
+			let holdTouchId = null;
+
+			const onStart = (e) => {
 				e.preventDefault();
 				e.stopPropagation();
-				mobile.sprintActive = true;
-				mobile.sprintGrace = 20; // ~1/3 de segundo de proteção após o toque
-				btn.classList.add("active");
+				if (mobile.sprintMode === "doubletap") return; // botão oculto nesse modo
+
+				if (mobile.sprintMode === "hold") {
+					if (holdTouchId !== null) return;
+					const t = e.changedTouches ? e.changedTouches[0] : null;
+					holdTouchId = t ? t.identifier : "mouse";
+					mobile.sprintBtn = true;
+					btn.classList.add("active");
+				} else {
+					// modo tap: toque ativa, soltar o dedo não cancela
+					mobile.sprintActive = true;
+					mobile.sprintGrace = 20;
+					btn.classList.add("active");
+				}
 			};
-			// Só escuta o início do toque — soltar o dedo NÃO cancela o sprint
-			btn.addEventListener("touchstart", activate, { passive: false });
-			btn.addEventListener("mousedown", activate);
-			// Impede que touchend/mouseup no botão faça qualquer coisa
-			btn.addEventListener("touchend", (e) => { e.preventDefault(); e.stopPropagation(); }, { passive: false });
-			btn.addEventListener("touchcancel", (e) => { e.preventDefault(); e.stopPropagation(); }, { passive: false });
+
+			const onEnd = (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				if (mobile.sprintMode === "hold") {
+					if (e.changedTouches) {
+						for (let t of e.changedTouches) {
+							if (t.identifier === holdTouchId) {
+								mobile.sprintBtn = false;
+								btn.classList.remove("active");
+								holdTouchId = null;
+								break;
+							}
+						}
+					} else {
+						mobile.sprintBtn = false;
+						btn.classList.remove("active");
+						holdTouchId = null;
+					}
+				}
+				// modo tap: soltar o botão não faz nada
+			};
+
+			btn.addEventListener("touchstart", onStart, { passive: false });
+			btn.addEventListener("touchend", onEnd, { passive: false });
+			btn.addEventListener("touchcancel", onEnd, { passive: false });
+			btn.addEventListener("mousedown", onStart);
+			btn.addEventListener("mouseup", onEnd);
+			btn.addEventListener("mouseleave", onEnd);
 		})();
+
+		// Atualiza texto de dica do modo de corrida no menu
+		const selSprintMode = document.getElementById("selSprintMode");
+		const sprintModeHint = document.getElementById("sprintModeHint");
+		const sprintHints = {
+			hold: "Segure o botão SPRINT para correr; solte para parar.",
+			tap: "Toque no botão SPRINT para correr; solte o joystick para parar.",
+			doubletap: "Toque 2x no centro do joystick, solte, depois empurre na direção. Botão SPRINT fica oculto."
+		};
+		if (selSprintMode) {
+			selSprintMode.addEventListener("change", () => {
+				sprintModeHint.textContent = sprintHints[selSprintMode.value] || "";
+			});
+		}
 
 		// Switch player (tap)
 		document.getElementById("btnSwitch").addEventListener("touchstart", (e) => {
@@ -873,7 +947,7 @@
 				ball.vy = this.facingY * ((6 + this.power + forceExtra) * gameSpeedMult);
 				ball.cooldown = 15;
 				this.power = 0;
-				this.matchStamina = Math.max(0, this.matchStamina - 0.25); 
+				this.matchStamina = Math.max(0, this.matchStamina - 0.38); 
 			}
 
 			executeSuccessfulTackle(ball) {
@@ -918,9 +992,36 @@
 		};
 		let userPlayer = null;
 
+		function applyDifficulty(level) {
+			difficulty = level;
+			if (level === "easy") {
+				AI_SPEED_FACTOR = 0.70;
+				aiShootChance = 0.12;
+				aiPressDist = 160;
+				aiPassChance = 0.06;
+				aiMistakeChance = 0.18;
+				gkReactionBonus = 0.85;
+			} else if (level === "hard") {
+				AI_SPEED_FACTOR = 0.95;
+				aiShootChance = 0.28;
+				aiPressDist = 280;
+				aiPassChance = 0.02;
+				aiMistakeChance = 0.03;
+				gkReactionBonus = 1.25;
+			} else {
+				AI_SPEED_FACTOR = 0.82;
+				aiShootChance = 0.20;
+				aiPressDist = 220;
+				aiPassChance = 0.03;
+				aiMistakeChance = 0.08;
+				gkReactionBonus = 1.0;
+			}
+		}
+
 		function startGame() {
 			let dur = parseInt(document.getElementById("selTime").value);
 			gameSpeedMult = parseFloat(document.getElementById("selSpeed").value);
+			applyDifficulty(document.getElementById("selDifficulty").value);
 			
 			matchTimeLeft = dur;
 			scoreBlue = 0;
@@ -938,16 +1039,17 @@
 			document.getElementById("menuOverlay").style.display = "none";
 			document.getElementById("mobileControls").classList.add("active");
 			mobile.active = true;
-			mobile.doubleTapSprint = document.getElementById("chkDoubleTapSprint").checked;
+			mobile.sprintMode = document.getElementById("selSprintMode").value;
 			mobile.sprintActive = false;
+			mobile.sprintBtn = false;
 			mobile.sprintArmed = false;
+			mobile.sprintArmedUntil = 0;
 			mobile.sprintGrace = 0;
 			centerTapCount = 0;
 
-			// Se modo toque duplo estiver ativo, esconde o botão SPRINT
 			const sprintBtn = document.getElementById("btnSprint");
 			if (sprintBtn) {
-				sprintBtn.style.display = mobile.doubleTapSprint ? "none" : "flex";
+				sprintBtn.style.display = mobile.sprintMode === "doubletap" ? "none" : "flex";
 				sprintBtn.classList.remove("active");
 			}
 
@@ -955,7 +1057,6 @@
 			lastTick = Date.now();
 			
 			initPositions(true);
-			// tenta entrar em tela cheia automaticamente no mobile
 			if (window.innerWidth < 900) {
 				setTimeout(() => {
 					try { document.documentElement.requestFullscreen?.(); } catch(e){}
@@ -969,8 +1070,10 @@
 			mobile.active = false;
 			resetJoystick();
 			mobile.sprintActive = false;
+			mobile.sprintBtn = false;
 			mobile.sprintGrace = 0;
 			mobile.sprintArmed = false;
+			mobile.sprintArmedUntil = 0;
 			mobile.pass = false;
 			mobile.shoot = false;
 			mobile.cross = false;
@@ -1106,7 +1209,7 @@
 
 			if (oldData.length > 0 && oldData.length === players.length) {
 				for(let i = 0; i < players.length; i++) {
-					players[i].matchStamina = Math.min(100, oldData[i].matchStamina + 15);
+					players[i].matchStamina = Math.min(100, oldData[i].matchStamina + 8);
 					players[i].isExhausted = oldData[i].isExhausted;
 					players[i].exhaustTimer = oldData[i].exhaustTimer;
 				}
@@ -1194,7 +1297,7 @@
 			ball.progress = 0;
 			ball.speedAir = 6.0 * gameSpeedMult;
 			ball.cooldown = 15;
-			p.matchStamina = Math.max(0, p.matchStamina - 0.4);
+			p.matchStamina = Math.max(0, p.matchStamina - 0.55);
 		}
 
 		function updateEnemyAI() {
@@ -1304,37 +1407,43 @@
 			
 			let isMoving = Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05;
 			
-			// Sprint mobile: toque no botão ativa; cancela só ao soltar/parar o joystick de verdade
-			// Teclado: Shift continua como "segurar"
+			// Sprint: depende do modo (hold / tap / doubletap) + teclado Shift
 			if (mobile.sprintGrace > 0) mobile.sprintGrace--;
+			if (mobile.sprintArmed && Date.now() > mobile.sprintArmedUntil) {
+				mobile.sprintArmed = false;
+			}
 
 			const joyMag = Math.hypot(mobile.dx, mobile.dy);
-			// Só cancela se já passou a proteção do toque E o joystick está quase parado
-			if (mobile.sprintActive && mobile.sprintGrace <= 0 && joyMag < 0.20) {
+			// Modos tap e doubletap: cancela ao soltar/reduzir o joystick
+			if (mobile.sprintMode !== "hold" && mobile.sprintActive && mobile.sprintGrace <= 0 && joyMag < 0.20) {
 				mobile.sprintActive = false;
 				const sprintBtnEl = document.getElementById("btnSprint");
 				if (sprintBtnEl) sprintBtnEl.classList.remove("active");
 			}
 
+			const wantSprintMobile = mobile.sprintMode === "hold" ? mobile.sprintBtn : mobile.sprintActive;
 			let isSprinting = (
-				(keys["ShiftLeft"] || keys["ShiftRight"] || keys["Shift"] || mobile.sprintActive)
+				(keys["ShiftLeft"] || keys["ShiftRight"] || keys["Shift"] || wantSprintMobile)
 				&& userPlayer.stamina > 10 && isMoving
 			);
 			
 			let mentalitySpeedBonus = 1 + (userMentality * 0.05);
-			let exhaustFactor = (0.65 + 0.35 * (userPlayer.matchStamina / 100)) * mentalitySpeedBonus;
+			// Fator de cansaço punitivo — resistência da partida importa de verdade
+			let exhaustFactor = (0.45 + 0.55 * (userPlayer.matchStamina / 100)) * mentalitySpeedBonus;
 
 			if (isSprinting) {
 				userPlayer.speed = userPlayer.sprintSpeed * exhaustFactor;
 				userPlayer.stamina = Math.max(0, userPlayer.stamina - 0.7);
-				userPlayer.matchStamina = Math.max(0, userPlayer.matchStamina - 0.018);
+				userPlayer.matchStamina = Math.max(0, userPlayer.matchStamina - 0.032);
 			} else {
 				userPlayer.speed = userPlayer.baseSpeed * exhaustFactor;
 				if (!isMoving) {
-					userPlayer.stamina = Math.min(100, userPlayer.stamina + 1.2); 
+					userPlayer.stamina = Math.min(100, userPlayer.stamina + 1.2);
+					// Idle ainda gasta um pouco de resistência de partida
+					userPlayer.matchStamina = Math.max(0, userPlayer.matchStamina - 0.0015);
 				} else {
 					userPlayer.stamina = Math.min(100, userPlayer.stamina + 0.6); 
-					userPlayer.matchStamina = Math.max(0, userPlayer.matchStamina - 0.0035);
+					userPlayer.matchStamina = Math.max(0, userPlayer.matchStamina - 0.008);
 				}
 			}
 
@@ -1457,63 +1566,94 @@
 
 				let wantSprint = false;
 				let pMentality = p.team === 1 ? userMentality : enemyMentality;
-				let pExhaustFactor = (0.75 + 0.25 * (p.matchStamina / 100)) * (1 + (pMentality * 0.05));
+				let pExhaustFactor = (0.60 + 0.40 * (p.matchStamina / 100)) * (1 + (pMentality * 0.05));
 
-				if (p.stamina < 30 || p.matchStamina < 20) {
+				// IA valoriza energia
+				if (p.stamina < 45 || p.matchStamina < 40) {
 					wantSprint = false;
 				}
 
-				// --- GOLEIRO INTELIGENTE ---
+				// --- GOLEIRO MELHORADO ---
 				if (p.role === 'gk') {
 					let isMyHalf = p.team === 1 ? ball.x < 750 : ball.x > 650;
 					let distToBall = Math.hypot(ball.x - p.x, ball.y - p.y);
+					let ballComingToGoal = p.team === 1
+						? (ball.vx < -1 && ball.x < 500)
+						: (ball.vx > 1 && ball.x > 900);
 					
 					if (ball.holder === p) {
 						p.holdTime = (p.holdTime || 0) + 1;
-						if (p.holdTime > 25) {
+						// Espera um pouco, depois distribui para o lado mais livre
+						let holdLimit = difficulty === "hard" ? 18 : (difficulty === "easy" ? 35 : 25);
+						if (p.holdTime > holdLimit) {
 							let teammates = players.filter(pl => pl.team === p.team && pl !== p && pl.role === 'field' && !pl.isExhausted);
 							if (teammates.length > 0) {
-								teammates.sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y));
+								// Prefere laterais / quem está mais aberto e com energia
+								teammates.sort((a, b) => {
+									let openA = Math.abs(a.y - 400) + a.matchStamina * 0.5;
+									let openB = Math.abs(b.y - 400) + b.matchStamina * 0.5;
+									let distA = Math.hypot(a.x - p.x, a.y - p.y);
+									let distB = Math.hypot(b.x - p.x, b.y - p.y);
+									return (openB - distB * 0.3) - (openA - distA * 0.3);
+								});
 								let target = teammates[0];
 								let dx = target.x - p.x;
 								let dy = target.y - p.y;
 								p.setFacing(dx, dy);
-								
 								let distToTarget = Math.hypot(dx, dy);
-								p.power = Math.min(8, Math.max(3, distToTarget * 0.03));
+								p.power = Math.min(9, Math.max(3.5, distToTarget * 0.032));
 								p.shoot(ball);
 							} else {
-								p.setFacing(p.team === 1 ? 1 : -1, 0);
+								p.setFacing(p.team === 1 ? 1 : -1, (Math.random() - 0.5) * 0.4);
 								p.power = 6;
 								p.shoot(ball);
 							}
 							p.holdTime = 0;
 						}
 					} else {
+						// BUG FIX: zera holdTime ao perder a bola
+						p.holdTime = 0;
+
 						let lineGoalX = p.team === 1 ? 30 : 1370;
-						let targetY = Math.max(goalY + 10, Math.min(goalY + goalH - 10, ball.y));
+						// Antecipa a bola (olha um pouco à frente da trajetória)
+						let predY = ball.y + ball.vy * 8 * gkReactionBonus;
+						let targetY = Math.max(goalY + 8, Math.min(goalY + goalH - 8, predY));
 						let targetX = lineGoalX;
 
-						if (isMyHalf && distToBall < 350 && !ball.inAir) {
-							targetX = p.team === 1 ? Math.min(150, ball.x - 15) : Math.max(1250, ball.x + 15);
-							wantSprint = true;
+						// Sai do gol quando a bola está na área e perigosa
+						let comeOutDist = 320 * gkReactionBonus;
+						if (isMyHalf && distToBall < comeOutDist && !ball.inAir) {
+							let maxOut = p.team === 1 ? 180 : 1220;
+							targetX = p.team === 1
+								? Math.min(maxOut, ball.x - 20)
+								: Math.max(maxOut, ball.x + 20);
+							wantSprint = distToBall < 200 || ballComingToGoal;
 						}
 
-						if (p.y < targetY - 2) p.y += p.speed * (wantSprint ? 1.15 : 1.0);
-						else if (p.y > targetY + 2) p.y -= p.speed * (wantSprint ? 1.15 : 1.0);
+						// Reação mais rápida se a bola vem em direção ao gol
+						let moveMult = (wantSprint ? 1.2 : 1.0) * gkReactionBonus;
+						if (ballComingToGoal) moveMult *= 1.15;
+
+						if (p.y < targetY - 2) p.y += p.speed * moveMult;
+						else if (p.y > targetY + 2) p.y -= p.speed * moveMult;
 						
-						if (p.x < targetX - 2) p.x += p.speed * (wantSprint ? 1.15 : 1.0);
-						else if (p.x > targetX + 2) p.x -= p.speed * (wantSprint ? 1.15 : 1.0);
+						if (p.x < targetX - 2) p.x += p.speed * moveMult;
+						else if (p.x > targetX + 2) p.x -= p.speed * moveMult;
 						
 						p.setFacing(p.team === 1 ? 1 : -1, 0);
+
+						// Em dificuldade fácil o goleiro da IA erra o posicionamento às vezes
+						if (p.team === 2 && Math.random() < aiMistakeChance * 0.02) {
+							p.y += (Math.random() - 0.5) * 6;
+						}
 					}
 					
 					if (wantSprint) {
 						p.stamina = Math.max(0, p.stamina - 0.5);
-						p.matchStamina = Math.max(0, p.matchStamina - 0.003);
+						p.matchStamina = Math.max(0, p.matchStamina - 0.005);
 					} else {
 						p.stamina = Math.min(100, p.stamina + 0.8);
-						p.matchStamina = Math.max(0, p.matchStamina - 0.0008);
+						p.matchStamina = Math.max(0, p.matchStamina - 0.0012);
 					}
 					return;
 				}
@@ -1522,7 +1662,8 @@
 
 				let isWing = p.y < 250 || p.y > 550;
 				let isAttackingHalf = p.team === 1 ? p.x > 800 : p.x < 600;
-				if (ball.holder === p && isWing && isAttackingHalf && Math.random() < 0.07 && !ball.inAir) {
+				// Só cruza com energia razoável
+				if (ball.holder === p && isWing && isAttackingHalf && p.matchStamina > 35 && Math.random() < 0.07 && !ball.inAir) {
 					triggerCross(p);
 					return;
 				}
@@ -1535,13 +1676,19 @@
 					let toGoalX = p.team === 1 ? fieldWidth : 0;
 					let distToGoal = Math.hypot(toGoalX - p.x, 400 - p.y);
 
-					let shouldPass = currentTeamPasses < 1 && distToOpp < 90 && p.lineType !== 'att' && Math.random() < 0.03;
+					let energyLow = p.matchStamina < 50 || p.stamina < 40;
+					let passChance = energyLow ? Math.max(0.10, aiPassChance * 3) : aiPassChance;
+					// Erros em dificuldade fácil: passa de forma aleatória às vezes
+					if (p.team === 2 && Math.random() < aiMistakeChance * 0.01) passChance += 0.05;
+					let shouldPass = (currentTeamPasses < 2 || energyLow) && distToOpp < 110 && p.lineType !== 'att' && Math.random() < passChance;
 					
 					let teammates = players.filter(pl => pl.team === p.team && pl !== p && pl.role === 'field' && !pl.isExhausted);
 					if (shouldPass && teammates.length > 0) {
 						teammates.sort((a, b) => {
 							let scoreA = p.team === 1 ? a.x - p.x : p.x - a.x;
-							let scoreB = p.team === 1 ? b.x - p.x : p.x - a.x;
+							let scoreB = p.team === 1 ? b.x - p.x : p.x - b.x;
+							scoreA += a.matchStamina * 0.4;
+							scoreB += b.matchStamina * 0.4;
 							return scoreB - scoreA;
 						});
 						let target = teammates[0];
@@ -1554,34 +1701,40 @@
 						return;
 					}
 
-					wantSprint = true;
+					wantSprint = !energyLow && p.matchStamina > 45;
 					let angle = Math.atan2(400 - p.y, toGoalX - p.x);
-					p.x += Math.cos(angle) * p.speed * 1.1;
-					p.y += Math.sin(angle) * p.speed * 1.1;
+					let moveMult = wantSprint ? 1.1 : 1.0;
+					p.x += Math.cos(angle) * p.speed * moveMult;
+					p.y += Math.sin(angle) * p.speed * moveMult;
 					p.setFacing(Math.cos(angle), Math.sin(angle));
 
-					if (distToGoal < 520 && (Math.random() < 0.20 || currentTeamPasses >= 1 || distToOpp < 70)) { 
+					let shootRoll = Math.random();
+					// Em fácil a IA erra finalização com mais frequência
+					if (p.team === 2 && Math.random() < aiMistakeChance) shootRoll += 0.15;
+					if (distToGoal < 520 && (shootRoll < aiShootChance || currentTeamPasses >= 1 || distToOpp < 70)) { 
 						p.power = 9 + Math.random() * 3;
 						p.shoot(ball); 
 					}
 					
 					p.stamina = Math.max(0, p.stamina - 0.5);
-					p.matchStamina = Math.max(0, p.matchStamina - 0.008);
+					p.matchStamina = Math.max(0, p.matchStamina - 0.022);
 					return;
 				}
 
 				if (ball.holder && ball.holder.team !== p.team) {
 					let distToHolder = Math.hypot(ball.holder.x - p.x, ball.holder.y - p.y);
-					if (distToHolder < 220) {
-						wantSprint = true;
+					if (distToHolder < aiPressDist && p.matchStamina > 30) {
+						wantSprint = p.matchStamina > 45 && p.stamina > 35;
 						let angle = Math.atan2(ball.holder.y - p.y, ball.holder.x - p.x);
-						p.x += Math.cos(angle) * p.speed * 1.08;
-						p.y += Math.sin(angle) * p.speed * 1.08;
+						let pressMult = wantSprint ? 1.08 : 0.95;
+						p.x += Math.cos(angle) * p.speed * pressMult;
+						p.y += Math.sin(angle) * p.speed * pressMult;
 						p.setFacing(Math.cos(angle), Math.sin(angle));
 
 						if (distToHolder < p.radius + ball.holder.radius + 22) {
 							p.tackleHoldFrames++;
-							if (p.tackleHoldFrames >= 30 && p.tackleCooldown <= 0) {
+							let tackleFramesNeeded = difficulty === "hard" ? 24 : (difficulty === "easy" ? 36 : 30);
+							if (p.tackleHoldFrames >= tackleFramesNeeded && p.tackleCooldown <= 0) {
 								p.executeSuccessfulTackle(ball);
 								p.tackleHoldFrames = 0;
 							}
@@ -1590,7 +1743,7 @@
 						}
 						
 						p.stamina = Math.max(0, p.stamina - 0.6);
-						p.matchStamina = Math.max(0, p.matchStamina - 0.007);
+						p.matchStamina = Math.max(0, p.matchStamina - 0.018);
 						return;
 					}
 				}
@@ -1598,15 +1751,15 @@
 
 				let chaser = p.team === 1 ? chaserBlue : chaserRed;
 				
-				if (p === chaser && (!ball.holder && !ball.inAir && ball.holder?.team !== p.team)) {
-					wantSprint = true;
+				if (p === chaser && (!ball.holder && !ball.inAir) && p.matchStamina > 25) {
+					wantSprint = p.matchStamina > 40 && p.stamina > 30;
 					let angle = Math.atan2(ball.y - p.y, ball.x - p.x);
-					p.x += Math.cos(angle) * p.speed;
-					p.y += Math.sin(angle) * p.speed;
+					p.x += Math.cos(angle) * p.speed * (wantSprint ? 1.0 : 0.85);
+					p.y += Math.sin(angle) * p.speed * (wantSprint ? 1.0 : 0.85);
 					p.setFacing(Math.cos(angle), Math.sin(angle));
 					
 					p.stamina = Math.max(0, p.stamina - 0.5);
-					p.matchStamina = Math.max(0, p.matchStamina - 0.005);
+					p.matchStamina = Math.max(0, p.matchStamina - 0.014);
 				} else {
 					 wantSprint = false;
 					 let mentalityShift = p.team === 1 ? (userMentality * 40) : (-enemyMentality * 40);
@@ -1641,13 +1794,15 @@
 						 p.setFacing(Math.cos(angle), Math.sin(angle));
 						 
 						 p.stamina = Math.min(100, p.stamina + 0.6);
-						 p.matchStamina = Math.max(0, p.matchStamina - 0.0015);
+						 p.matchStamina = Math.max(0, p.matchStamina - 0.004);
 					 } else {
 						 p.stamina = Math.min(100, p.stamina + 1.2);
-						 p.matchStamina = Math.max(0, p.matchStamina - 0.0005);
+						 p.matchStamina = Math.max(0, p.matchStamina - 0.0015);
 					 }
 				}
 
+				// Fator de cansaço da IA também mais punitivo
+				pExhaustFactor = (0.45 + 0.55 * (p.matchStamina / 100)) * (1 + (pMentality * 0.05));
 				if (wantSprint) {
 					p.speed = p.sprintSpeed * pExhaustFactor * AI_SPEED_FACTOR;
 				} else {
@@ -1693,35 +1848,92 @@
 				ball.y = ball.holder.y + ball.holder.facingY * (ball.holder.radius + ball.radius + 2);
 				ball.vx = 0; ball.vy = 0;
 			} else {
-				ball.x += ball.vx; ball.y += ball.vy;
-				ball.vx *= ball.friction; ball.vy *= ball.friction;
+				// Movimento em sub-passos evita a bola "atravessar" o goleiro
+				let steps = Math.max(1, Math.ceil(Math.hypot(ball.vx, ball.vy) / 6));
+				let stepX = ball.vx / steps;
+				let stepY = ball.vy / steps;
+				let caught = false;
 
-				if (ball.y - ball.radius <= 0) { ball.vy *= -1; ball.y = ball.radius; }
-				if (ball.y + ball.radius >= fieldHeight) { ball.vy *= -1; ball.y = fieldHeight - ball.radius; }
+				for (let s = 0; s < steps && !caught; s++) {
+					ball.x += stepX;
+					ball.y += stepY;
 
-				if (ball.x - ball.radius <= 0) {
-					if (ball.y >= goalY && ball.y <= goalY + goalH) {
-						scoreRed++; document.getElementById("eScore").textContent = scoreRed; initPositions(); return;
-					} else { ball.vx *= -1; ball.x = ball.radius; team1PassCount = 0; team2PassCount = 0; }
-				}
-				if (ball.x + ball.radius >= fieldWidth) {
-					if (ball.y >= goalY && ball.y <= goalY + goalH) {
-						scoreBlue++; document.getElementById("pScore").textContent = scoreBlue; initPositions(); return;
-					} else { ball.vx *= -1; ball.x = fieldWidth - ball.radius; team1PassCount = 0; team2PassCount = 0; }
-				}
+					if (ball.y - ball.radius <= 0) { ball.vy *= -1; stepY *= -1; ball.y = ball.radius; }
+					if (ball.y + ball.radius >= fieldHeight) { ball.vy *= -1; stepY *= -1; ball.y = fieldHeight - ball.radius; }
 
-				players.forEach(p => {
-					if (!p.isExhausted && ball.cooldown <= 0 && p.stunTime <= 0) {
-						let distToBall = Math.hypot(p.x - ball.x, p.y - ball.y);
-						if (distToBall < p.radius + ball.radius + 4) { 
-							if (ball.holder && ball.holder.team !== p.team) {
-								if (p.team === 1) team1PassCount = 0; else team2PassCount = 0;
+					// Interceptação especial do goleiro (raio maior + defesas)
+					if (ball.cooldown <= 0) {
+						for (let gi = 0; gi < players.length; gi++) {
+							let gk = players[gi];
+							if (gk.role !== 'gk' || gk.isExhausted || gk.stunTime > 0) continue;
+							let gDist = Math.hypot(gk.x - ball.x, gk.y - ball.y);
+							let catchRadius = gk.radius + ball.radius + 18; // raio de defesa maior
+							// Ainda maior se a bola vem em alta velocidade na direção do gol
+							let speed = Math.hypot(ball.vx, ball.vy);
+							if (speed > 4) catchRadius += 8;
+
+							if (gDist < catchRadius) {
+								// Chance de defesa baseada na dificuldade e alinhamento
+								let saveChance = 0.75 * gkReactionBonus;
+								if (difficulty === "easy" && gk.team === 2) saveChance *= 0.7;
+								if (difficulty === "hard" && gk.team === 2) saveChance = Math.min(0.95, saveChance * 1.15);
+								// Se está bem alinhado com a bola, quase sempre pega
+								if (gDist < gk.radius + ball.radius + 6) saveChance = 1.0;
+
+								if (Math.random() < saveChance) {
+									ball.holder = gk;
+									ball.vx = 0; ball.vy = 0;
+									ball.cooldown = 8;
+									gk.holdTime = 0;
+									caught = true;
+									break;
+								} else {
+									// Defesa parcial: desvia a bola
+									let nx = (ball.x - gk.x) / (gDist || 1);
+									let ny = (ball.y - gk.y) / (gDist || 1);
+									ball.vx = nx * (4 + Math.random() * 3) * gameSpeedMult;
+									ball.vy = ny * (3 + Math.random() * 4) * gameSpeedMult;
+									ball.x = gk.x + nx * (gk.radius + ball.radius + 4);
+									ball.y = gk.y + ny * (gk.radius + ball.radius + 4);
+									ball.cooldown = 10;
+									caught = true;
+									break;
+								}
 							}
-							ball.holder = p; 
-							ball.cooldown = 5; 
 						}
 					}
-				});
+
+					if (caught) break;
+
+					if (ball.x - ball.radius <= 0) {
+						if (ball.y >= goalY && ball.y <= goalY + goalH) {
+							scoreRed++; document.getElementById("eScore").textContent = scoreRed; initPositions(); return;
+						} else { ball.vx *= -1; stepX *= -1; ball.x = ball.radius; team1PassCount = 0; team2PassCount = 0; }
+					}
+					if (ball.x + ball.radius >= fieldWidth) {
+						if (ball.y >= goalY && ball.y <= goalY + goalH) {
+							scoreBlue++; document.getElementById("pScore").textContent = scoreBlue; initPositions(); return;
+						} else { ball.vx *= -1; stepX *= -1; ball.x = fieldWidth - ball.radius; team1PassCount = 0; team2PassCount = 0; }
+					}
+				}
+
+				ball.vx *= ball.friction; ball.vy *= ball.friction;
+
+				// Campo players pegam a bola (goleiro já tratado acima)
+				if (!caught && ball.cooldown <= 0) {
+					players.forEach(p => {
+						if (p.role === 'gk' || p.isExhausted || p.stunTime > 0) return;
+						let distToBall = Math.hypot(p.x - ball.x, p.y - ball.y);
+						if (distToBall < p.radius + ball.radius + 4) { 
+							ball.holder = p; 
+							ball.cooldown = 5;
+							if (p.isUser && (keys["KeyP"] || mobile.pass)) {
+								p.ignorePassWhileHeld = true;
+								p.passHold = 0;
+							}
+						}
+					});
+				}
 			}
 		}
 
@@ -1731,17 +1943,59 @@
 			ctx.save();
 			ctx.translate(-camera.x, -camera.y);
 
-			ctx.strokeStyle = "rgba(255, 255, 255, 0.4)"; ctx.lineWidth = 3;
+			// === CAMPO COM FAIXAS DE GRAMA ===
+			const stripeH = 40;
+			for (let y = 0; y < fieldHeight; y += stripeH) {
+				ctx.fillStyle = (Math.floor(y / stripeH) % 2 === 0) ? "#2d8a4e" : "#267a45";
+				ctx.fillRect(0, y, fieldWidth, stripeH);
+			}
+
+			// Borda do campo
+			ctx.strokeStyle = "rgba(255, 255, 255, 0.85)";
+			ctx.lineWidth = 4;
 			ctx.strokeRect(0, 0, fieldWidth, fieldHeight);
 
-			ctx.beginPath(); ctx.moveTo(fieldWidth / 2, 0); ctx.lineTo(fieldWidth / 2, fieldHeight); ctx.stroke();
-			ctx.beginPath(); ctx.arc(fieldWidth / 2, fieldHeight / 2, 80, 0, Math.PI * 2); ctx.stroke();
+			// Linha do meio e círculo central
+			ctx.beginPath();
+			ctx.moveTo(fieldWidth / 2, 0);
+			ctx.lineTo(fieldWidth / 2, fieldHeight);
+			ctx.stroke();
+			ctx.beginPath();
+			ctx.arc(fieldWidth / 2, fieldHeight / 2, 80, 0, Math.PI * 2);
+			ctx.stroke();
+			ctx.beginPath();
+			ctx.arc(fieldWidth / 2, fieldHeight / 2, 5, 0, Math.PI * 2);
+			ctx.fillStyle = "#fff";
+			ctx.fill();
 
-			ctx.strokeRect(0, 200, 180, 400); 
-			ctx.strokeRect(fieldWidth - 180, 200, 180, 400); 
+			// Áreas
+			ctx.strokeRect(0, 200, 180, 400);
+			ctx.strokeRect(fieldWidth - 180, 200, 180, 400);
+			// Pequena área
+			ctx.strokeRect(0, 280, 60, 240);
+			ctx.strokeRect(fieldWidth - 60, 280, 60, 240);
+			// Marca do pênalti
+			ctx.beginPath(); ctx.arc(110, 400, 4, 0, Math.PI * 2); ctx.fill();
+			ctx.beginPath(); ctx.arc(fieldWidth - 110, 400, 4, 0, Math.PI * 2); ctx.fill();
 
-			ctx.fillStyle = "#fff"; ctx.fillRect(0, goalY, 15, goalH); ctx.fillRect(fieldWidth - 15, goalY, 15, goalH); 
-			ctx.fillStyle = "#222"; ctx.fillRect(0, goalY + 5, 10, goalH - 10); ctx.fillRect(fieldWidth - 10, goalY + 5, 10, goalH - 10);
+			// Gols com “rede”
+			ctx.fillStyle = "#e8e8e8";
+			ctx.fillRect(-2, goalY, 18, goalH);
+			ctx.fillRect(fieldWidth - 16, goalY, 18, goalH);
+			ctx.strokeStyle = "rgba(40,40,40,0.5)";
+			ctx.lineWidth = 1;
+			for (let gy = goalY; gy < goalY + goalH; gy += 12) {
+				ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(16, gy); ctx.stroke();
+				ctx.beginPath(); ctx.moveTo(fieldWidth - 16, gy); ctx.lineTo(fieldWidth, gy); ctx.stroke();
+			}
+			for (let gx = 0; gx <= 16; gx += 8) {
+				ctx.beginPath(); ctx.moveTo(gx, goalY); ctx.lineTo(gx, goalY + goalH); ctx.stroke();
+				ctx.beginPath(); ctx.moveTo(fieldWidth - 16 + gx, goalY); ctx.lineTo(fieldWidth - 16 + gx, goalY + goalH); ctx.stroke();
+			}
+			// Travessão
+			ctx.fillStyle = "#fff";
+			ctx.fillRect(-3, goalY - 4, 20, 5);
+			ctx.fillRect(fieldWidth - 17, goalY - 4, 20, 5);
 
 			if (gameState === "playing") {
 				if (ball.inAir) {
@@ -1756,10 +2010,14 @@
 
 				players.forEach(p => {
 					if (p.isExhausted) {
+						// Sombra
+						ctx.beginPath();
+						ctx.ellipse(p.x, p.y + 8, p.radius * 0.7, 4, 0, 0, Math.PI * 2);
+						ctx.fillStyle = "rgba(0,0,0,0.25)";
+						ctx.fill();
 						ctx.beginPath(); ctx.arc(p.x, p.y, p.radius * 0.8, 0, Math.PI * 2);
-						ctx.fillStyle = p.color; ctx.globalAlpha = 0.5; ctx.fill(); ctx.globalAlpha = 1.0;
+						ctx.fillStyle = p.color; ctx.globalAlpha = 0.45; ctx.fill(); ctx.globalAlpha = 1.0;
 						ctx.strokeStyle = "#ff0000"; ctx.lineWidth = 2; ctx.stroke();
-						
 						ctx.font = "bold 9px 'Segoe UI', Tahoma";
 						ctx.textAlign = "center";
 						ctx.fillStyle = "#ff4500";
@@ -1767,27 +2025,58 @@
 						return;
 					}
 
+					// Sombra do jogador
+					ctx.beginPath();
+					ctx.ellipse(p.x + 2, p.y + p.radius - 2, p.radius * 0.75, 4, 0, 0, Math.PI * 2);
+					ctx.fillStyle = "rgba(0,0,0,0.3)";
+					ctx.fill();
+
+					// Anel do jogador controlado
 					if (p.isUser) {
-						ctx.beginPath(); ctx.arc(p.x, p.y, p.radius + 5, 0, Math.PI * 2);
-						ctx.fillStyle = "rgba(255, 215, 0, 0.5)"; ctx.fill();
+						ctx.beginPath();
+						ctx.arc(p.x, p.y, p.radius + 6, 0, Math.PI * 2);
+						ctx.strokeStyle = "rgba(255, 215, 0, 0.7)";
+						ctx.lineWidth = 3;
+						ctx.stroke();
 					}
 
-					ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-					ctx.globalAlpha = p.stunTime > 0 ? 0.4 : 1.0; 
-					ctx.fillStyle = p.color; ctx.fill(); ctx.globalAlpha = 1.0;
-					
-					ctx.lineWidth = 2; ctx.strokeStyle = p.tackleCooldown > 0 ? "#555" : "#000"; ctx.stroke();
+					// Corpo
+					ctx.beginPath();
+					ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+					ctx.globalAlpha = p.stunTime > 0 ? 0.4 : 1.0;
+					// Gradiente simples no jogador
+					const grad = ctx.createRadialGradient(p.x - 3, p.y - 3, 2, p.x, p.y, p.radius);
+					grad.addColorStop(0, p.team === 1 ? "#7adfff" : "#ff8a60");
+					grad.addColorStop(1, p.color);
+					ctx.fillStyle = grad;
+					ctx.fill();
+					ctx.globalAlpha = 1.0;
+					ctx.lineWidth = 2;
+					ctx.strokeStyle = p.role === 'gk' ? "#ffd700" : (p.tackleCooldown > 0 ? "#555" : "#111");
+					ctx.stroke();
 
-					ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + p.facingX * p.radius, p.y + p.facingY * p.radius);
-					ctx.strokeStyle = "#fff"; ctx.lineWidth = 2; ctx.stroke();
+					// Direção
+					ctx.beginPath();
+					ctx.moveTo(p.x, p.y);
+					ctx.lineTo(p.x + p.facingX * p.radius, p.y + p.facingY * p.radius);
+					ctx.strokeStyle = "#fff";
+					ctx.lineWidth = 2.5;
+					ctx.stroke();
 
+					// Nome da posição
 					ctx.font = "bold 10px 'Segoe UI', Tahoma";
 					ctx.textAlign = "center";
 					ctx.fillStyle = p.isUser ? "#ffd700" : "#ffffff";
+					ctx.strokeStyle = "rgba(0,0,0,0.5)";
+					ctx.lineWidth = 3;
+					ctx.strokeText(p.positionName, p.x, p.y - p.radius - 8);
 					ctx.fillText(p.positionName, p.x, p.y - p.radius - 8);
 
 					if (p.isUser && p.power > 0) {
-						ctx.fillStyle = "yellow"; ctx.fillRect(p.x - 15, p.y - 42, (p.power / 12) * 30, 4);
+						ctx.fillStyle = "rgba(0,0,0,0.5)";
+						ctx.fillRect(p.x - 16, p.y - 44, 32, 6);
+						ctx.fillStyle = "#ffd700";
+						ctx.fillRect(p.x - 15, p.y - 43, (p.power / 12) * 30, 4);
 					}
 
 					if (p.tackleHoldFrames > 0) {
@@ -1796,20 +2085,37 @@
 						ctx.strokeStyle = "#fff"; ctx.lineWidth = 1; ctx.strokeRect(p.x - 12, p.y - p.radius - 22, 24, 4);
 					}
 
+					// Barras de fôlego (verde) e resistência de partida (laranja) — sempre visíveis no jogador controlado
 					if (p.stamina < 100 || p.matchStamina < 100 || p.isUser) {
-						ctx.fillStyle = "rgba(255, 0, 0, 0.6)"; ctx.fillRect(p.x - 12, p.y + p.radius + 4, 24, 3);
-						ctx.fillStyle = "rgba(0, 255, 0, 0.9)"; ctx.fillRect(p.x - 12, p.y + p.radius + 4, (p.stamina / 100) * 24, 3);
-						
-						ctx.fillStyle = "rgba(100, 100, 100, 0.6)"; ctx.fillRect(p.x - 12, p.y + p.radius + 8, 24, 3);
-						ctx.fillStyle = "rgba(255, 140, 0, 0.9)"; ctx.fillRect(p.x - 12, p.y + p.radius + 8, (p.matchStamina / 100) * 24, 3);
-
-						ctx.strokeStyle = "black"; ctx.lineWidth = 1;
-						ctx.strokeRect(p.x - 12, p.y + p.radius + 4, 24, 3); ctx.strokeRect(p.x - 12, p.y + p.radius + 8, 24, 3);
+						ctx.fillStyle = "rgba(0,0,0,0.55)";
+						ctx.fillRect(p.x - 13, p.y + p.radius + 3, 26, 9);
+						ctx.fillStyle = "rgba(0, 220, 80, 0.95)";
+						ctx.fillRect(p.x - 12, p.y + p.radius + 4, (p.stamina / 100) * 24, 3);
+						ctx.fillStyle = "rgba(255, 140, 0, 0.95)";
+						ctx.fillRect(p.x - 12, p.y + p.radius + 8, (p.matchStamina / 100) * 24, 3);
 					}
 				});
 
-				ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-				ctx.fillStyle = "#fff"; ctx.fill(); ctx.strokeStyle = "#000"; ctx.lineWidth = 1.5; ctx.stroke();
+				// Bola com sombra e brilho
+				ctx.beginPath();
+				ctx.ellipse(ball.x + 2, ball.y + ball.radius, ball.radius * 0.9, 3, 0, 0, Math.PI * 2);
+				ctx.fillStyle = "rgba(0,0,0,0.35)";
+				ctx.fill();
+				ctx.beginPath();
+				ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+				const ballGrad = ctx.createRadialGradient(ball.x - 2, ball.y - 2, 1, ball.x, ball.y, ball.radius);
+				ballGrad.addColorStop(0, "#ffffff");
+				ballGrad.addColorStop(1, "#d0d0d0");
+				ctx.fillStyle = ballGrad;
+				ctx.fill();
+				ctx.strokeStyle = "#222";
+				ctx.lineWidth = 1.5;
+				ctx.stroke();
+				// pentágono simples
+				ctx.beginPath();
+				ctx.arc(ball.x, ball.y, 2.5, 0, Math.PI * 2);
+				ctx.fillStyle = "#222";
+				ctx.fill();
 			}
 
 			ctx.restore();
