@@ -709,14 +709,14 @@
 						<summary>🎨 Gráficos</summary>
 						<div class="menu-row-check">
 							<label>
-								<input type="checkbox" id="chkEnhancedGfx">
+								<input type="checkbox" id="chkEnhancedGfx" checked>
 								Gráficos melhorados (estádio, rastro, altura)
 							</label>
 						</div>
 						<div class="menu-row-check">
 							<label>
-								<input type="checkbox" id="chkExtraGfx">
-								Gráficos extras
+								<input type="checkbox" id="chkExtraGfx" checked>
+								Gráficos extras (listras, mini-mapa, suor)
 							</label>
 						</div>
 					</details>
@@ -732,7 +732,7 @@
 								<option value="300">5 Minutos</option>
 								<option value="600">10 Minutos</option>
 								<option value="1200">20 Minutos</option>
-								<option value="2400">Me selecione se quer passar o tempo :P</option>
+								<option value="900">Me selecione se quer passar o tempo :P</option>
 							</select>
 						</div>
 						<div class="menu-row">
@@ -785,7 +785,7 @@
 			<ul>
 				<li>Segure o botão p/ carregar força</li>
 				<li>Prepare o chute sem a bola = chute de primeira</li>
-				<li>Gráficos extras adiciona algumas ferramentas</li>
+				<li>Gráficos extras: mini-mapa, listras, suor e seta → bola</li>
 			</ul>
 		</div>
 
@@ -5214,7 +5214,7 @@
 
 		resizeCanvas();
 		draw();
-		gameLoop(); // if this commit do not update my github pages...
+		gameLoop();
 	</script>
 </body>
 </html>
