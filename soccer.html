@@ -709,14 +709,14 @@
 						<summary>🎨 Gráficos</summary>
 						<div class="menu-row-check">
 							<label>
-								<input type="checkbox" id="chkEnhancedGfx" checked>
+								<input type="checkbox" id="chkEnhancedGfx">
 								Gráficos melhorados (estádio, rastro, altura)
 							</label>
 						</div>
 						<div class="menu-row-check">
 							<label>
-								<input type="checkbox" id="chkExtraGfx" checked>
-								Gráficos extras (listras, mini-mapa, suor)
+								<input type="checkbox" id="chkExtraGfx">
+								Gráficos extras
 							</label>
 						</div>
 					</details>
@@ -732,7 +732,7 @@
 								<option value="300">5 Minutos</option>
 								<option value="600">10 Minutos</option>
 								<option value="1200">20 Minutos</option>
-								<option value="900">Me selecione se quer passar o tempo :P</option>
+								<option value="2400">Me selecione se quer passar o tempo :P</option>
 							</select>
 						</div>
 						<div class="menu-row">
@@ -785,7 +785,7 @@
 			<ul>
 				<li>Segure o botão p/ carregar força</li>
 				<li>Prepare o chute sem a bola = chute de primeira</li>
-				<li>Gráficos extras: mini-mapa, listras, suor e seta → bola</li>
+				<li>Gráficos extras adiciona algumas ferramentas</li>
 			</ul>
 		</div>
 
@@ -2534,25 +2534,36 @@
 			ball.inAir = false;
 			ball.height = 0;
 			ball.cooldown = 10;
-			// Posiciona times nas metades
+			const half = fieldWidth / 2;
+			// Cada time na própria metade, sem empilhar
 			players.forEach(p => {
 				if (p.isSentOff || p.isExhausted) return;
+				p.stunTime = 0;
+				p.isSliding = false;
+				p._callFrames = 0;
 				if (p.role === 'gk') {
 					p.x = p.team === 1 ? 50 : fieldWidth - 50;
 					p.y = fieldHeight / 2;
-				} else {
-					p.x = p.baseX;
-					p.y = p.baseY;
-					// Garante metade correta
-					if (p.team === 1 && p.x > fieldWidth / 2 - 20) p.x = fieldWidth / 2 - 30;
-					if (p.team === 2 && p.x < fieldWidth / 2 + 20) p.x = fieldWidth / 2 + 30;
+					return;
 				}
-				p.stunTime = 0;
+				p.y = Math.max(40, Math.min(fieldHeight - 40, p.baseY));
+				if (p.team === 1) {
+					// Metade esquerda
+					p.x = Math.min(p.baseX, half - 45);
+				} else {
+					// Metade direita: espelha quem nasceu no ataque (baseX baixo)
+					if (p.baseX < half) {
+						p.x = half + (half - p.baseX);
+					} else {
+						p.x = Math.max(p.baseX, half + 45);
+					}
+				}
+				p.x = Math.max(p.radius + 10, Math.min(fieldWidth - p.radius - 10, p.x));
 			});
 			// Cobrador do pontapé perto da bola
 			let taker = getClosestAnyField(team, fieldWidth / 2, fieldHeight / 2);
 			if (taker) {
-				taker.x = fieldWidth / 2 + (team === 1 ? -18 : 18);
+				taker.x = fieldWidth / 2 + (team === 1 ? -22 : 22);
 				taker.y = fieldHeight / 2;
 				if (team === 1) {
 					if (userPlayer) userPlayer.isUser = false;
@@ -3913,9 +3924,10 @@
 
 				let isWing = p.y < 250 * SCALE_Y || p.y > 550 * SCALE_Y;
 				let isAttackingHalf = p.team === 1 ? p.x > fieldWidth * 0.55 : p.x < fieldWidth * 0.45;
-				// Cruzamentos: só se mentalidade > 0 e dificuldade permite
+				// Cruzamentos: time do usuário só com ment > 0; IA adversária livre (se dificuldade permite)
 				const mentCross = p.team === 1 ? userMentality : enemyMentality;
-				if (aiCanCross && mentCross > 0 && ball.holder === p && isWing && isAttackingHalf && p.matchStamina > 30 && !ball.inAir) {
+				const canCross = p.team === 2 ? true : (mentCross > 0);
+				if (aiCanCross && canCross && ball.holder === p && isWing && isAttackingHalf && p.matchStamina > 30 && !ball.inAir) {
 					let cChance = aiCrossChance;
 					// Difícil: cruzamentos melhores da ponta para a área
 					if (difficulty === "hard") {
@@ -3980,12 +3992,13 @@
 					p.y += Math.sin(angle) * p.speed * moveMult;
 					p.setFacing(Math.cos(angle), Math.sin(angle));
 
-					// Ataca / finaliza só com mentalidade > 0
+					// Usuário: só finaliza com mentalidade > 0; IA adversária sempre pode
 					const mentNow = p.team === 1 ? userMentality : enemyMentality;
+					const canShoot = p.team === 2 ? true : (mentNow > 0);
 					let inFinalThird = p.team === 1 ? p.x > fieldWidth * 0.68 : p.x < fieldWidth * 0.32;
 					let shootRoll = Math.random();
 					if (p.team === 2 && Math.random() < aiMistakeChance) shootRoll += 0.15;
-					if (mentNow > 0 && inFinalThird && distToGoal < 320 && (shootRoll < aiShootChance || distToOpp < 55)) { 
+					if (canShoot && inFinalThird && distToGoal < 320 && (shootRoll < aiShootChance || distToOpp < 55)) { 
 						let distFactor = Math.max(0.4, 1 - (distToGoal / 380));
 						p.power = (5 + Math.random() * 2.5) * distFactor + 1.5;
 						p.shoot(ball); 
@@ -4083,47 +4096,50 @@
 						 return;
 					 }
 
+					 // Time do usuário: só ataca com mentalidade > 0; IA adversária sempre pode jogar
 					 const ment = p.team === 1 ? userMentality : enemyMentality;
-					 // Só avança de verdade se mentalidade > 0
+					 const canAttack = p.team === 2 ? true : (ment > 0);
 					 if (ball.holder && ball.holder.team === p.team) {
-						 if (ment > 0) {
-							 let avanco = p.team === 1 ? Math.max(0, ball.x - 400) : Math.min(0, ball.x - 1000);
-							 targetX += avanco * 0.4 * Math.min(1, ment / 1.5);
-							 if (aiMidfieldControl && p.team === 2 && p.lineType === 'mid') {
-								 targetX = targetX * 0.5 + ball.x * 0.5;
-								 targetY = p.baseY * 0.4 + ball.y * 0.6;
+						 if (canAttack) {
+							 // Avança em proporção do campo (não valores fixos antigos)
+							 let avanco = p.team === 1
+								 ? Math.max(0, (ball.x - fieldWidth * 0.25) * 0.45)
+								 : Math.min(0, (ball.x - fieldWidth * 0.75) * 0.45);
+							 targetX = p.baseX + mentalityShift + avanco;
+							 // Oferece opção perto da bola
+							 if (p.lineType === 'mid' || p.lineType === 'att') {
+								 targetX = targetX * 0.55 + ball.x * 0.45;
+								 targetY = p.baseY * 0.45 + ball.y * 0.55;
 							 }
 						 } else {
-							 // Neutro/defensivo: mantém posição / recua
 							 targetX = p.baseX + mentalityShift * 0.5;
 							 if (p.lineType === 'att') {
-								 targetX = p.team === 1
-									 ? Math.min(targetX, fieldWidth * 0.55)
-									 : Math.max(targetX, fieldWidth * 0.45);
+								 targetX = Math.min(targetX, fieldWidth * 0.52);
 							 }
 						 }
 					 } else {
-						 let recuo = p.team === 1 ? Math.min(ball.x - 100, p.baseX) : Math.max(ball.x + 100, p.baseX);
-						 targetX = recuo + mentalityShift;
-						 if (ment <= 0 && p.lineType === 'att') {
-							 targetX = p.team === 1
-								 ? Math.min(p.baseX, fieldWidth * 0.5)
-								 : Math.max(p.baseX, fieldWidth * 0.5);
+						 // Sem a bola: recua / marca
+						 let recuo = p.team === 1
+							 ? Math.min(ball.x - 80, p.baseX + 40)
+							 : Math.max(ball.x + 80, p.baseX - 40);
+						 targetX = recuo + mentalityShift * 0.6;
+						 if (!canAttack && p.lineType === 'att') {
+							 targetX = Math.min(p.baseX, fieldWidth * 0.5);
 						 }
-						 if (aiMidfieldControl && p.team === 2 && p.lineType === 'mid' && ment > 0) {
-							 targetX = (recuo + ball.x) * 0.5;
-							 targetY = p.baseY * 0.5 + ball.y * 0.5;
+						 if (p.lineType === 'mid') {
+							 targetY = p.baseY * 0.55 + ball.y * 0.45;
 						 }
 					 }
 
+					 // Limites por linha (proporcionais ao campo)
 					 if (p.team === 1) {
-						 if (p.lineType === 'def') targetX = Math.max(80 * SCALE_X, Math.min(680 * SCALE_X, targetX));
-						 else if (p.lineType === 'mid') targetX = Math.max(300 * SCALE_X, Math.min(1050 * SCALE_X, targetX));
-						 else if (p.lineType === 'att') targetX = Math.max(600 * SCALE_X, Math.min(fieldWidth - 40, targetX));
+						 if (p.lineType === 'def') targetX = Math.max(fieldWidth * 0.05, Math.min(fieldWidth * 0.48, targetX));
+						 else if (p.lineType === 'mid') targetX = Math.max(fieldWidth * 0.18, Math.min(fieldWidth * 0.72, targetX));
+						 else if (p.lineType === 'att') targetX = Math.max(fieldWidth * 0.35, Math.min(fieldWidth * 0.95, targetX));
 					 } else {
-						 if (p.lineType === 'def') targetX = Math.max(720 * SCALE_X, Math.min(fieldWidth - 80 * SCALE_X, targetX));
-						 else if (p.lineType === 'mid') targetX = Math.max(350 * SCALE_X, Math.min(1100 * SCALE_X, targetX));
-						 else if (p.lineType === 'att') targetX = Math.max(40 * SCALE_X, Math.min(800 * SCALE_X, targetX));
+						 if (p.lineType === 'def') targetX = Math.max(fieldWidth * 0.52, Math.min(fieldWidth * 0.95, targetX));
+						 else if (p.lineType === 'mid') targetX = Math.max(fieldWidth * 0.28, Math.min(fieldWidth * 0.82, targetX));
+						 else if (p.lineType === 'att') targetX = Math.max(fieldWidth * 0.05, Math.min(fieldWidth * 0.65, targetX));
 					 }
 
 					 targetY = Math.max(50, Math.min(fieldHeight - 50, targetY));
@@ -4828,23 +4844,27 @@
 						ctx.beginPath();
 						ctx.arc(p.x, drawPy, p.radius, 0, Math.PI * 2);
 						ctx.fill();
-						// Listras verticais (gráficos extras)
+						// Camisa = parte de baixo da bolinha + listras escuras
 						if (extraGraphics && p.role !== 'gk') {
 							ctx.save();
 							ctx.beginPath();
-							ctx.arc(p.x, drawPy, p.radius - 1, 0, Math.PI * 2);
+							ctx.arc(p.x, drawPy, p.radius - 0.5, 0, Math.PI, false);
+							ctx.lineTo(p.x - p.radius + 0.5, drawPy);
+							ctx.closePath();
 							ctx.clip();
-							ctx.strokeStyle = p.team === 1 ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.3)";
-							ctx.lineWidth = 2.4;
-							for (let s = -3; s <= 3; s++) {
-								ctx.beginPath();
-								ctx.moveTo(p.x + s * 4.2, drawPy - p.radius);
-								ctx.lineTo(p.x + s * 4.2, drawPy + p.radius);
-								ctx.stroke();
+							ctx.fillStyle = p.team === 1 ? "rgba(0,90,160,0.4)" : "rgba(160,40,0,0.4)";
+							ctx.fillRect(p.x - p.radius, drawPy, p.radius * 2, p.radius + 1);
+							const sw = Math.max(3.5, p.radius * 0.24);
+							const gap = sw * 1.85;
+							ctx.fillStyle = p.team === 1 ? "rgba(0,45,100,0.6)" : "rgba(100,12,0,0.6)";
+							for (let i = -2; i <= 2; i++) {
+								ctx.fillRect(p.x + i * gap - sw / 2, drawPy, sw, p.radius + 1);
 							}
 							ctx.restore();
 						}
 						ctx.globalAlpha = 1.0;
+						ctx.beginPath();
+						ctx.arc(p.x, drawPy, p.radius, 0, Math.PI * 2);
 						ctx.lineWidth = 2;
 						ctx.strokeStyle = p.role === 'gk' ? "#ffd700" : (p.tackleCooldown > 0 ? "#555" : "#111");
 						ctx.stroke();
