@@ -94,6 +94,16 @@
 			color: #ffd700;
 			border: 1px solid #555;
 		}
+		#weatherBadge {
+			font-size: 12px;
+			font-weight: bold;
+			background: #1a2a3a;
+			padding: 4px 8px;
+			border-radius: 6px;
+			color: #a8d4ff;
+			border: 1px solid #4a6a8a;
+			white-space: nowrap;
+		}
 		.tactical-box {
 			font-size: 11px;
 			background: #111;
@@ -610,6 +620,7 @@
 			<div id="goalScorers"></div>
 		</div>
 		<div id="timerDisplay">00:00</div>
+		<div id="weatherBadge" title="Clima da partida">☀ Ensolarado</div>
 		<div class="tactical-box">
 			<span class="blue-team">Sua Ofensiva: <strong id="mentalityDisplay">0 (Neutro)</strong></span>
 			<span class="red-team">IA Adversária: <strong id="enemyMentalityDisplay">0 (Neutro)</strong></span>
@@ -723,6 +734,24 @@
 
 					<details class="settings-sub">
 						<summary>📋 Regras</summary>
+						<div class="menu-row">
+							<label>Clima:</label>
+							<select id="selWeather">
+								<option value="random" selected>Aleatório (RNG)</option>
+								<option value="clear">☀ Ensolarado</option>
+								<option value="cloudy">☁ Nublado</option>
+								<option value="rain">🌧 Chuva</option>
+								<option value="night">🌙 Noite</option>
+								<option value="storm">⛈ Tempestade</option>
+							</select>
+						</div>
+						<p class="menu-hint">Chuva/tempestade: bola escorrega mais. Noite: campo mais escuro.</p>
+						<div class="menu-row-check">
+							<label>
+								<input type="checkbox" id="chkGoalReplay" checked>
+								Replay detalhado do gol
+							</label>
+						</div>
 						<div class="menu-row">
 							<label>Duração:</label>
 							<select id="selTime">
@@ -1014,6 +1043,126 @@
 		let kickoff = null; // { team, timer }
 		let pendingKickoffTeam = null;
 		let enableOffside = true;
+
+		// ===== CLIMA =====
+		const WEATHER_DEFS = {
+			clear:  { id: "clear",  label: "☀ Ensolarado", weight: 34, friction: 0.970, wind: 0,   rain: 0,  dark: 0 },
+			cloudy: { id: "cloudy", label: "☁ Nublado",    weight: 24, friction: 0.968, wind: 0.15, rain: 0,  dark: 0.12 },
+			rain:   { id: "rain",   label: "🌧 Chuva",      weight: 20, friction: 0.988, wind: 0.35, rain: 1,  dark: 0.18 },
+			night:  { id: "night",  label: "🌙 Noite",      weight: 14, friction: 0.972, wind: 0.1,  rain: 0,  dark: 0.42 },
+			storm:  { id: "storm",  label: "⛈ Tempestade", weight: 8,  friction: 0.992, wind: 0.7,  rain: 2,  dark: 0.35 }
+		};
+		let weather = { ...WEATHER_DEFS.clear };
+		let weatherRainDrops = [];
+		let weatherWindDir = 1;
+
+		function pickWeather(forcedId) {
+			if (forcedId && forcedId !== "random" && WEATHER_DEFS[forcedId]) {
+				weather = { ...WEATHER_DEFS[forcedId] };
+			} else {
+				const list = Object.values(WEATHER_DEFS);
+				const total = list.reduce((s, w) => s + w.weight, 0);
+				let r = Math.random() * total;
+				let chosen = list[0];
+				for (const w of list) {
+					r -= w.weight;
+					if (r <= 0) { chosen = w; break; }
+				}
+				weather = { ...chosen };
+			}
+			weatherWindDir = Math.random() < 0.5 ? -1 : 1;
+			weatherRainDrops = [];
+			if (weather.rain > 0) {
+				const n = weather.rain === 2 ? 90 : 55;
+				for (let i = 0; i < n; i++) {
+					weatherRainDrops.push({
+						x: Math.random() * fieldWidth,
+						y: Math.random() * fieldHeight,
+						len: 8 + Math.random() * 14,
+						spd: 6 + Math.random() * 8 + weather.rain * 3
+					});
+				}
+			}
+			ball.friction = weather.friction;
+			const badge = document.getElementById("weatherBadge");
+			if (badge) badge.textContent = weather.label;
+		}
+
+		// ===== REPLAY DE GOL =====
+		const REPLAY_MAX = 178;
+		let replayBuffer = [];
+		let goalReplay = null; // { frames, idx, sub, team, scorer, assister, clock, trail, shotSpeed }
+		let pendingGoalReplay = null; // gravado no gol, tocado após comemoração
+		let enableGoalReplay = true;
+		let lastShotSpeed = 0; // velocidade no momento do chute (unidades do jogo)
+
+		function noteBallLaunchSpeed() {
+			lastShotSpeed = Math.hypot(ball.vx || 0, ball.vy || 0);
+		}
+
+		function formatShotSpeed(spd) {
+			// escala só para leitura (aprox. “km/h” de brinquedo)
+			const v = Math.round((spd || 0) * 11.5);
+			return v + " km/h";
+		}
+
+		function captureReplayFrame() {
+			if (goalCeleb.active || goalReplay || kickoff) return;
+			const spd = Math.hypot(ball.vx || 0, ball.vy || 0);
+			const frame = {
+				ball: {
+					x: ball.x, y: ball.y, height: ball.height || 0,
+					inAir: !!ball.inAir, holder: ball.holder ? true : false,
+					spd
+				},
+				players: players.map(p => ({
+					x: p.x, y: p.y, team: p.team, role: p.role,
+					pos: p.positionName || "", isUser: !!p.isUser,
+					fx: p.facingX || 0, fy: p.facingY || 0,
+					sent: !!p.isSentOff, slide: !!p.isSliding
+				}))
+			};
+			replayBuffer.push(frame);
+			if (replayBuffer.length > REPLAY_MAX) replayBuffer.shift();
+		}
+
+		// Guarda o buffer no gol; o replay só roda DEPOIS da comemoração
+		function queueGoalReplay(team, scorer, assister, clock) {
+			const frames = replayBuffer.length >= 12 ? replayBuffer.slice() : null;
+			replayBuffer = [];
+			let peak = lastShotSpeed;
+			if (frames) {
+				frames.forEach(f => {
+					if (f.ball && f.ball.spd > peak) peak = f.ball.spd;
+				});
+			}
+			pendingGoalReplay = {
+				frames,
+				team, scorer, assister,
+				clock: clock || "",
+				shotSpeed: peak
+			};
+		}
+
+		function beginQueuedGoalReplay() {
+			const q = pendingGoalReplay;
+			pendingGoalReplay = null;
+			if (!enableGoalReplay || !q || !q.frames || q.frames.length < 12) {
+				const koTeam = pendingKickoffTeam != null ? pendingKickoffTeam : 1;
+				pendingKickoffTeam = null;
+				initPositions();
+				startKickoff(koTeam);
+				return;
+			}
+			const trail = q.frames.map(f => ({ x: f.ball.x, y: f.ball.y, h: f.ball.height }));
+			goalReplay = {
+				frames: q.frames, idx: 0, sub: 0, hold: 0,
+				team: q.team, scorer: q.scorer, assister: q.assister,
+				clock: q.clock, trail, phase: "play",
+				shotSpeed: q.shotSpeed || 0
+			};
+			ball.vx = 0; ball.vy = 0; ball.holder = null; ball.inAir = false; ball.height = 0;
+		}
 		let lastPassOffsideList = []; // jogadores em impedimento no momento do passe
 		let lastPassX = 0;
 		// Torcida (posições fixas ao longo das laterais)
@@ -1604,6 +1753,7 @@
 				ball.holder = null;
 				ball.vx = this.facingX * ((6 + this.power + forceExtra) * gameSpeedMult * powerMult);
 				ball.vy = this.facingY * ((6 + this.power + forceExtra) * gameSpeedMult * powerMult);
+				if (!isPass) noteBallLaunchSpeed();
 				ball.cooldown = 15;
 				this.power = 0;
 				this.matchStamina = Math.max(0, this.matchStamina - 0.38);
@@ -1812,6 +1962,14 @@
 			pendingKickoffTeam = null;
 			ballTrail = [];
 			ball.height = 0;
+			goalReplay = null;
+			pendingGoalReplay = null;
+			replayBuffer = [];
+			lastShotSpeed = 0;
+			const weatherSel = document.getElementById("selWeather");
+			pickWeather(weatherSel ? weatherSel.value : "random");
+			const chkReplay = document.getElementById("chkGoalReplay");
+			enableGoalReplay = chkReplay ? chkReplay.checked : true;
 			achRunStartX = null;
 			achForm5xxx = false;
 			achGfxWholeMatch = enhancedGraphics;
@@ -2654,6 +2812,8 @@
 			lastPassPlayer = null;
 			goalEvents.push({ team: scoringTeam, clock, pos, player: scorer });
 			updateGoalScorersUI();
+			// 1º comemoração → 2º replay → 3º pontapé
+			queueGoalReplay(scoringTeam, scorer, assister, clock);
 			startGoalCelebration(scoringTeam, scorer, assister);
 		}
 
@@ -3072,6 +3232,45 @@
 
 		function update() {
 			if (gameState !== "playing") return;
+
+			// ===== REPLAY DE GOL (câmera lenta detalhada) =====
+			if (goalReplay) {
+				const gr = goalReplay;
+				if (gr.phase === "play") {
+					gr.sub++;
+					// Slow-mo: 3 ticks por frame
+					if (gr.sub >= 3) {
+						gr.sub = 0;
+						gr.idx++;
+					}
+					if (gr.idx >= gr.frames.length) {
+						gr.phase = "hold";
+						gr.hold = 45;
+						// Congela no último frame
+						gr.idx = gr.frames.length - 1;
+					}
+					const fr = gr.frames[Math.min(gr.idx, gr.frames.length - 1)];
+					if (fr) {
+						camera.x += (fr.ball.x - canvas.width / 2 - camera.x) * 0.18;
+						camera.y += (fr.ball.y - canvas.height / 2 - camera.y) * 0.18;
+						camera.x = Math.max(0, Math.min(fieldWidth - canvas.width, camera.x));
+						camera.y = Math.max(0, Math.min(fieldHeight - canvas.height, camera.y));
+					}
+				} else if (gr.phase === "hold") {
+					gr.hold--;
+					if (gr.hold <= 0) {
+						goalReplay = null;
+						const koTeam = pendingKickoffTeam != null ? pendingKickoffTeam : 1;
+						pendingKickoffTeam = null;
+						initPositions();
+						startKickoff(koTeam);
+					}
+				}
+				return;
+			}
+
+			// Grava frames para possível replay
+			captureReplayFrame();
 
 			// Durante GOL / pontapé: pausa a lógica principal
 			if (goalCeleb.active) {
@@ -4300,6 +4499,7 @@
 							const power = 7.5 * gameSpeedMult * 1.2;
 							ball.vx = fx * power;
 							ball.vy = fy * power;
+							noteBallLaunchSpeed();
 							ball.cooldown = 12;
 							lastTouchTeam = 1;
 							lastTouchPlayer = userPlayer;
@@ -4483,7 +4683,13 @@
 					}
 				}
 
-				ball.vx *= ball.friction; ball.vy *= ball.friction;
+				// Clima: atrito + vento leve
+				const fr = weather.friction || ball.friction;
+				ball.vx *= fr; ball.vy *= fr;
+				if (weather.wind > 0 && !ball.holder) {
+					ball.vx += weatherWindDir * weather.wind * 0.012;
+					ball.vy += Math.sin(Date.now() * 0.0015) * weather.wind * 0.008;
+				}
 
 				// Campo players pegam a bola (goleiro já tratado acima)
 				if (!caught && ball.cooldown <= 0) {
@@ -4523,11 +4729,98 @@
 			ctx.restore();
 		}
 
+		function drawReplayWorld(fr) {
+			if (!fr) return;
+			// jogadores do frame
+			fr.players.forEach(p => {
+				if (p.sent) return;
+				const r = 16;
+				ctx.beginPath();
+				ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+				ctx.fillStyle = p.team === 1 ? "#1e90ff" : "#ff4500";
+				ctx.fill();
+				ctx.strokeStyle = p.isUser ? "#ffd700" : "#111";
+				ctx.lineWidth = p.isUser ? 3 : 1.5;
+				ctx.stroke();
+				if (p.pos) {
+					ctx.fillStyle = "#fff";
+					ctx.font = "bold 9px sans-serif";
+					ctx.textAlign = "center";
+					ctx.fillText(p.pos, p.x, p.y + 3);
+				}
+			});
+			// rastro da bola
+			if (goalReplay && goalReplay.trail) {
+				ctx.strokeStyle = goalReplay.team === 1 ? "rgba(79,195,247,0.55)" : "rgba(255,138,101,0.55)";
+				ctx.lineWidth = 3;
+				ctx.beginPath();
+				goalReplay.trail.forEach((pt, i) => {
+					if (i === 0) ctx.moveTo(pt.x, pt.y);
+					else ctx.lineTo(pt.x, pt.y);
+				});
+				ctx.stroke();
+			}
+			// bola
+			const br = 7 + (fr.ball.height || 0) * 0.35;
+			ctx.beginPath();
+			ctx.arc(fr.ball.x, fr.ball.y, br, 0, Math.PI * 2);
+			ctx.fillStyle = "#fff";
+			ctx.fill();
+			ctx.strokeStyle = "#333";
+			ctx.lineWidth = 1.5;
+			ctx.stroke();
+		}
+
+		function drawWeatherOverlay() {
+			// Escuridão (noite / tempestade / nublado)
+			if (weather.dark > 0) {
+				ctx.fillStyle = `rgba(5,10,30,${weather.dark})`;
+				ctx.fillRect(0, 0, canvas.width, canvas.height);
+			}
+			// Refletores à noite
+			if (weather.id === "night" || weather.id === "storm") {
+				const spots = [
+					[80, 80], [canvas.width - 80, 80],
+					[80, canvas.height - 80], [canvas.width - 80, canvas.height - 80]
+				];
+				spots.forEach(([sx, sy]) => {
+					const g = ctx.createRadialGradient(sx, sy, 10, sx, sy, 160);
+					g.addColorStop(0, "rgba(255,240,180,0.18)");
+					g.addColorStop(1, "rgba(255,240,180,0)");
+					ctx.fillStyle = g;
+					ctx.beginPath();
+					ctx.arc(sx, sy, 160, 0, Math.PI * 2);
+					ctx.fill();
+				});
+			}
+			// Chuva (espaço da tela)
+			if (weather.rain > 0 && weatherRainDrops.length) {
+				ctx.strokeStyle = weather.rain === 2 ? "rgba(180,210,255,0.55)" : "rgba(180,210,255,0.4)";
+				ctx.lineWidth = 1.2;
+				const windOff = weatherWindDir * weather.wind * 4;
+				weatherRainDrops.forEach(d => {
+					const sx = ((d.x - camera.x) % (canvas.width + 40) + canvas.width + 40) % (canvas.width + 40) - 20;
+					const sy = ((d.y - camera.y) % (canvas.height + 40) + canvas.height + 40) % (canvas.height + 40) - 20;
+					ctx.beginPath();
+					ctx.moveTo(sx, sy);
+					ctx.lineTo(sx + windOff * 0.3, sy + d.len);
+					ctx.stroke();
+					d.y += d.spd;
+					d.x += windOff * 0.15;
+					if (d.y > fieldHeight + 20) { d.y = -10; d.x = Math.random() * fieldWidth; }
+				});
+			}
+		}
+
 		function draw() {
 			ctx.clearRect(0, 0, canvas.width, canvas.height);
 
 			ctx.save();
 			ctx.translate(-camera.x, -camera.y);
+
+			// Grama mais escura na chuva/noite
+			const grassA = (weather.id === "rain" || weather.id === "storm") ? "#1f6b3a" : "#2d8a4e";
+			const grassB = (weather.id === "rain" || weather.id === "storm") ? "#1a5c32" : "#267a45";
 
 			// === ARQUIBANCADAS (gráficos melhorados) ===
 			if (enhancedGraphics) {
@@ -4555,8 +4848,61 @@
 			// === CAMPO COM FAIXAS DE GRAMA ===
 			const stripeH = 50;
 			for (let y = 0; y < fieldHeight; y += stripeH) {
-				ctx.fillStyle = (Math.floor(y / stripeH) % 2 === 0) ? "#2d8a4e" : "#267a45";
+				ctx.fillStyle = (Math.floor(y / stripeH) % 2 === 0) ? grassA : grassB;
 				ctx.fillRect(0, y, fieldWidth, stripeH);
+			}
+
+			// Replay: desenha mundo do frame em vez do estado vivo
+			if (goalReplay) {
+				const fr = goalReplay.frames[Math.min(goalReplay.idx, goalReplay.frames.length - 1)];
+				drawReplayWorld(fr);
+				ctx.restore();
+				drawWeatherOverlay();
+				// UI do replay
+				ctx.fillStyle = "rgba(0,0,0,0.4)";
+				ctx.fillRect(0, 0, canvas.width, 72);
+				ctx.fillStyle = "#ffd700";
+				ctx.font = "bold 22px 'Segoe UI', Tahoma";
+				ctx.textAlign = "left";
+				ctx.fillText("▶ REPLAY", 16, 26);
+				const pct = goalReplay.frames.length ? Math.floor((goalReplay.idx / (goalReplay.frames.length - 1 || 1)) * 100) : 0;
+				const liveSpd = fr && fr.ball ? fr.ball.spd : 0;
+				const shotSpd = goalReplay.shotSpeed || liveSpd;
+				ctx.font = "13px 'Segoe UI', Tahoma";
+				ctx.fillStyle = "#fff";
+				ctx.fillText((goalReplay.clock ? ("Gol " + goalReplay.clock) : "Gol") + "  ·  chute " + formatShotSpeed(shotSpd), 16, 48);
+				ctx.fillStyle = "#aaa";
+				ctx.font = "11px 'Segoe UI', Tahoma";
+				ctx.fillText("agora " + formatShotSpeed(liveSpd) + "  ·  " + pct + "%", 16, 64);
+				ctx.textAlign = "right";
+				ctx.fillStyle = goalReplay.team === 1 ? "#4fc3f7" : "#ff8a65";
+				const scName = goalReplay.scorer
+					? (goalReplay.scorer.positionName || (goalReplay.scorer.role === "gk" ? "GOL" : "JG"))
+					: "??";
+				let info = scName;
+				if (goalReplay.assister) {
+					const aName = goalReplay.assister.positionName || "JG";
+					info += "  ·  assist. " + aName;
+				}
+				ctx.font = "bold 16px 'Segoe UI', Tahoma";
+				ctx.fillText(info, canvas.width - 16, 30);
+				ctx.font = "12px 'Segoe UI', Tahoma";
+				ctx.fillStyle = "#ccc";
+				ctx.fillText("câmera lenta", canvas.width - 16, 50);
+				// barra de progresso
+				ctx.fillStyle = "rgba(255,255,255,0.2)";
+				ctx.fillRect(0, canvas.height - 6, canvas.width, 6);
+				ctx.fillStyle = goalReplay.team === 1 ? "#4fc3f7" : "#ff8a65";
+				ctx.fillRect(0, canvas.height - 6, canvas.width * (pct / 100), 6);
+				if (goalReplay.phase === "hold") {
+					ctx.fillStyle = "rgba(0,0,0,0.25)";
+					ctx.fillRect(0, 0, canvas.width, canvas.height);
+					ctx.fillStyle = "#ffd700";
+					ctx.font = "bold 28px 'Segoe UI', Tahoma";
+					ctx.textAlign = "center";
+					ctx.fillText("GOL!", canvas.width / 2, canvas.height / 2);
+				}
+				return;
 			}
 
 			// Torcidinha nas laterais
@@ -4978,8 +5324,11 @@
 
 			ctx.restore();
 
+			// Clima (chuva / noite) por cima do campo, sob a UI
+			if (gameState === "playing" && !goalReplay) drawWeatherOverlay();
+
 			// Mini-mapa + seta para a bola (gráficos extras)
-			if (extraGraphics && gameState === "playing") {
+			if (extraGraphics && gameState === "playing" && !goalReplay) {
 				const mw = 120, mh = 68;
 				const mx = canvas.width - mw - 10;
 				const my = 10;
@@ -5061,7 +5410,7 @@
 			}
 
 			// Comemoração de GOL — jogador corre + torcida explode
-			if (goalCeleb.active) {
+			if (goalCeleb.active && !goalReplay) {
 				goalCeleb.timer--;
 				const t = goalCeleb.timer;
 				const pulse = 1 + Math.sin(t * 0.25) * 0.1;
@@ -5117,10 +5466,8 @@
 					goalCeleb.active = false;
 					goalCeleb.scorer = null;
 					goalCeleb.assister = null;
-					const koTeam = pendingKickoffTeam != null ? pendingKickoffTeam : 1;
-					pendingKickoffTeam = null;
-					initPositions();
-					startKickoff(koTeam);
+					// Depois da comemoração → replay (se houver) → pontapé
+					beginQueuedGoalReplay();
 				}
 			}
 
