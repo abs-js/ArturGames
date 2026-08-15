@@ -5,10 +5,14 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="mobile-web-app-capable" content="yes">
+	<meta name="application-name" content="Simple Soccer Ball">
+	<meta name="apple-mobile-web-app-title" content="Simple Soccer Ball">
 	<link rel="icon" type="image/png" sizes="32x32" href="img.png">
 	<link rel="apple-touch-icon" href="imgA.png">
 	<link rel="icon" type="image/png" sizes="192x192" href="img.png">
-	<title>Futebol Mobile</title>
+	<title>Simple Soccer Ball</title>
+	<!-- CrazyGames HTML5 SDK v3 -->
+	<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
 	<style>
 		* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 		html, body {
@@ -432,7 +436,34 @@
 			overflow: hidden;
 		}
 		/* ===== Elenco no celular: mais espaço e toque fácil ===== */
-		@media (max-width: 800px) {
+		@media (max-width: 900px) {
+			#topBar {
+				gap: 4px;
+				margin: 2px 0;
+				padding: 2px 4px;
+				max-height: 22vh;
+				overflow-y: auto;
+			}
+			#scoreBoard { font-size: 12px; padding: 3px 6px; }
+			#timerDisplay { font-size: 12px; }
+			#weatherBadge { font-size: 10px; padding: 2px 6px; }
+			#coinBar { font-size: 12px; }
+			.tactical-box { font-size: 10px; }
+			.menu-box {
+				max-width: min(96vw, 420px);
+				max-height: 86vh;
+				padding: 12px 10px 14px;
+				font-size: 13px;
+			}
+			.menu-box h2 { font-size: 16px; }
+			.menu-nav button { padding: 10px 8px; font-size: 12px; }
+			.play-mode-card { padding: 10px; margin: 6px 0; }
+			.btn-start { padding: 14px; font-size: 16px; min-height: 48px; }
+			#playerDetailModal .pd-card {
+				max-width: min(96vw, 400px);
+				max-height: 80vh;
+				padding: 14px 12px 12px;
+			}
 			#squadOverlay {
 				padding-bottom: env(safe-area-inset-bottom, 0);
 			}
@@ -467,17 +498,16 @@
 				aspect-ratio: 0.72;
 			}
 			.slot {
-				width: 52px;
-				height: 52px;
-				margin-left: -26px;
-				margin-top: -26px;
-				min-width: 52px;
-				min-height: 52px;
-				border-radius: 10px;
+				width: 56px;
+				height: 62px;
+				margin-left: -28px;
+				margin-top: -31px;
+				min-width: 56px;
+				min-height: 62px;
 				font-size: 9px;
 			}
 			.slot .sl-pos { font-size: 8px; }
-			.slot .sl-name { font-size: 9px; max-width: 44px; }
+			.slot .sl-name { font-size: 9px; max-width: 48px; }
 			.slot .sl-ovr { font-size: 9px; }
 			.squad-side {
 				flex: 1 1 auto;
@@ -536,7 +566,57 @@
 				padding: 10px !important;
 			}
 		}
-		@media (max-width: 800px) and (max-height: 700px) {
+		/* Paisagem no celular: menos altura de topo, menus mais largos */
+		@media (max-width: 950px) and (orientation: landscape) {
+			#topBar {
+				max-height: 16vh;
+				margin: 1px 0;
+				gap: 3px;
+			}
+			#scoreBoard, #timerDisplay, #coinBar { font-size: 11px; }
+			.tactical-box { display: none; }
+			.menu-box {
+				max-width: min(92vw, 560px);
+				max-height: 92vh;
+				padding: 10px 12px;
+			}
+			.squad-body { flex-direction: row !important; }
+			.squad-pitch-wrap {
+				max-height: 78vh;
+				max-width: 42vw;
+				flex: 0 0 40%;
+			}
+			.squad-pitch {
+				max-height: 70vh;
+				max-width: 100%;
+			}
+			.squad-side {
+				border-top: none;
+				border-left: 1px solid #333;
+				max-height: 82vh;
+			}
+			.slot {
+				width: 48px;
+				height: 54px;
+				margin-left: -24px;
+				margin-top: -27px;
+				min-width: 48px;
+				min-height: 54px;
+			}
+			#joystickZone {
+				bottom: 8px;
+				left: 6px;
+				width: 120px;
+				height: 120px;
+				transform: scale(0.9);
+				transform-origin: bottom left;
+			}
+			#btnPause {
+				top: max(8px, env(safe-area-inset-top, 6px));
+				right: max(8px, env(safe-area-inset-right, 8px));
+			}
+		}
+		@media (max-width: 800px) and (max-height: 700px) and (orientation: portrait) {
 			.squad-pitch-wrap { max-height: 28vh; }
 			.squad-pitch { max-height: 26vh; max-width: min(100%, 240px); }
 			.sq-detail { max-height: 22vh; }
@@ -784,18 +864,91 @@
 
 		#btnPause {
 			position: absolute;
-			top: 10px;
-			right: 10px;
-			width: 44px;
-			height: 44px;
-			border-radius: 10px;
-			border: 2px solid rgba(255,255,255,0.5);
-			background: rgba(0,0,0,0.55);
+			top: max(48px, calc(env(safe-area-inset-top, 8px) + 42px));
+			right: max(10px, env(safe-area-inset-right, 10px));
+			width: 48px;
+			height: 48px;
+			border-radius: 12px;
+			border: 2px solid rgba(255,255,255,0.55);
+			background: rgba(0,0,0,0.6);
 			color: #fff;
-			font-size: 18px;
+			font-size: 20px;
 			pointer-events: auto;
 			z-index: 20;
 			cursor: pointer;
+		}
+		@media (max-width: 900px) {
+			#btnPause {
+				top: max(56px, calc(env(safe-area-inset-top, 10px) + 52px));
+				right: max(12px, env(safe-area-inset-right, 12px));
+				width: 52px;
+				height: 52px;
+			}
+		}
+		/* Tutorial só no menu */
+		#tutorialBtn.hidden-ingame { display: none !important; }
+		/* Loading hexágono */
+		#bootLoader {
+			position: fixed;
+			inset: 0;
+			z-index: 30000;
+			background: #0a0c12;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			justify-content: center;
+			gap: 18px;
+			transition: opacity 0.4s ease;
+		}
+		#bootLoader.hide {
+			opacity: 0;
+			pointer-events: none;
+		}
+		#bootLoader .boot-title {
+			font-size: 18px;
+			font-weight: bold;
+			color: #ffd700;
+			letter-spacing: 0.5px;
+		}
+		.hex-loader {
+			width: 72px;
+			height: 80px;
+			clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+			background: #1a2030;
+			position: relative;
+			overflow: hidden;
+			box-shadow: 0 0 0 2px rgba(255,255,255,0.12);
+		}
+		.hex-loader .hex-fill {
+			position: absolute;
+			inset: 0;
+			background: linear-gradient(135deg, #ffd700 0%, #81c784 55%, #2e7d32 100%);
+			transform-origin: bottom left;
+			transform: scale(0, 0);
+			animation: hexLoadDiag 1.35s ease-in-out infinite;
+		}
+		@keyframes hexLoadDiag {
+			0% { transform: scale(0, 0) translate(-10%, 10%); }
+			55% { transform: scale(1.05, 1.05) translate(0, 0); }
+			100% { transform: scale(1, 1) translate(0, 0); opacity: 0.85; }
+		}
+		.boot-bar {
+			width: min(220px, 70vw);
+			height: 6px;
+			border-radius: 4px;
+			background: #222;
+			overflow: hidden;
+		}
+		.boot-bar > div {
+			height: 100%;
+			width: 0%;
+			border-radius: 4px;
+			background: linear-gradient(90deg, #ffd700, #66bb6a);
+			animation: bootBar 1.4s ease-out forwards;
+		}
+		@keyframes bootBar {
+			from { width: 0%; }
+			to { width: 100%; }
 		}
 		#pauseOverlay {
 			display: none;
@@ -1235,6 +1388,13 @@
 	</style>
 </head>
 <body>
+	<div id="bootLoader">
+		<div class="boot-title">Simple Soccer Ball</div>
+		<div class="hex-loader" id="hexLoader">
+			<div class="hex-fill" id="hexFill"></div>
+		</div>
+		<div class="boot-bar"><div id="bootBarFill"></div></div>
+	</div>
 
 	<div id="setupOverlay">
 		<div class="setup-box">
@@ -1324,21 +1484,21 @@
 		</div>
 	</div>
 
-	<h1>Futebol <span style="font-size:12px;color:#ffd700">BETA</span></h1>
+	<h1 id="gameBrandTitle">Simple Soccer Ball</h1>
 	<div id="topBar">
-		<button id="btnFullscreen" onclick="toggleFullscreen()">Tela Cheia ⛶</button>
+		<button id="btnFullscreen" onclick="toggleFullscreen()" data-i18n="fullscreen">Tela Cheia ⛶</button>
 		<div id="scoreBoard">
-			<span class="blue-team">AZUL: <span id="pScore">0</span> <span id="blueReds" class="red-cards" title="Cartões vermelhos"></span></span> 
+			<span class="blue-team"><span data-i18n="blue">AZUL</span>: <span id="pScore">0</span> <span id="blueReds" class="red-cards" title="Cartões vermelhos"></span></span> 
 			&nbsp;&nbsp;x&nbsp;&nbsp; 
-			<span class="red-team">VERMELHO: <span id="eScore">0</span> <span id="redReds" class="red-cards" title="Cartões vermelhos"></span></span>
+			<span class="red-team"><span data-i18n="red">VERMELHO</span>: <span id="eScore">0</span> <span id="redReds" class="red-cards" title="Cartões vermelhos"></span></span>
 			<div id="goalScorers"></div>
 		</div>
 		<div id="timerDisplay">00:00</div>
 		<div id="weatherBadge" title="Clima" style="font-size:12px;font-weight:bold;background:#1a2a3a;padding:4px 8px;border-radius:6px;color:#a8d4ff;border:1px solid #4a6a8a;white-space:nowrap">☀ Ensolarado</div>
 		<div id="coinBar" title="Moedas">🪙 <span id="coinDisplay">0</span></div>
 		<div class="tactical-box">
-			<span class="blue-team">Sua Ofensiva: <strong id="mentalityDisplay">0 (Neutro)</strong></span>
-			<span class="red-team">IA Adversária: <strong id="enemyMentalityDisplay">0 (Neutro)</strong></span>
+			<span class="blue-team"><span data-i18n="yourOff">Sua Ofensiva</span>: <strong id="mentalityDisplay">0 (Neutro)</strong></span>
+			<span class="red-team"><span data-i18n="aiMent">IA Adversária</span>: <strong id="enemyMentalityDisplay">0 (Neutro)</strong></span>
 		</div>
 	</div>
 	
@@ -1347,34 +1507,34 @@
 		
 		<div id="menuOverlay">
 			<div class="menu-box">
-				<h2 id="menuTitle">Futebol BETA</h2>
+				<h2 id="menuTitle">Simple Soccer Ball</h2>
 				<div id="matchStatsBox" style="display:none"></div>
 
 				<div class="menu-nav" id="mainMenuNav">
-					<button type="button" class="on" id="navSecGame" onclick="setMenuSection('game')">⚽ Jogo</button>
-					<button type="button" id="navSecSquad" onclick="setMenuSection('squad')">👥 Elenco</button>
-					<button type="button" id="navSecSettings" onclick="setMenuSection('settings')">⚙ Config</button>
-					<div class="nav-hint">PC: <b>Q</b> / <b>E</b> troca seção</div>
+					<button type="button" class="on" id="navSecGame" onclick="setMenuSection('game')" data-i18n="navGame">⚽ Jogo</button>
+					<button type="button" id="navSecSquad" onclick="setMenuSection('squad')" data-i18n="navSquad">👥 Elenco</button>
+					<button type="button" id="navSecSettings" onclick="setMenuSection('settings')" data-i18n="navSettings">⚙ Config</button>
+					<div class="nav-hint" data-i18n="navHint">PC: <b>Q</b> / <b>E</b> troca seção</div>
 				</div>
 
 				<!-- ===== SEÇÃO JOGO ===== -->
 				<div class="menu-section on" id="secGame">
-					<h3>Modo de partida</h3>
+					<h3 data-i18n="matchMode">Modo de partida</h3>
 					<div class="play-mode-card selected" id="modeFriendly" onclick="selectPlayMode('friendly')">
-						<b>🎮 Amistoso</b>
-						<p>Escolha a dificuldade e jogue livre.</p>
+						<b data-i18n="friendlyTitle">🎮 Amistoso</b>
+						<p data-i18n="friendlyDesc">Escolha a dificuldade e jogue livre.</p>
 					</div>
 					<div class="play-mode-card" id="modeLeague" onclick="selectPlayMode('league')">
-						<b>🏆 Liga / Torneio</b>
-						<p>Partidas da carreira (região, nacional…).</p>
+						<b data-i18n="leagueTitle">🏆 Liga / Torneio</b>
+						<p data-i18n="leagueDesc">Partidas da carreira (região, nacional…).</p>
 					</div>
 
 					<div id="friendlyOpts">
 						<div class="menu-row" id="rowDifficulty">
-							<label>Dificuldade:</label>
+							<label data-i18n="difficulty">Dificuldade:</label>
 							<select id="selDifficulty"></select>
 						</div>
-						<p class="menu-hint" id="diffHint">Vença para liberar o próximo nível.</p>
+						<p class="menu-hint" id="diffHint" data-i18n="diffHint">Vença para liberar o próximo nível.</p>
 					</div>
 					<div id="leagueOpts" style="display:none">
 						<p class="menu-hint" id="careerMatchHint" style="color:#ffd700"></p>
@@ -1382,21 +1542,21 @@
 					</div>
 
 					<div class="menu-row">
-						<label>Duração:</label>
+						<label data-i18n="duration">Duração:</label>
 						<select id="selTime">
-							<option value="60">1 Minuto</option>
-							<option value="120">2 Minutos</option>
-							<option value="180" selected>3 Minutos</option>
-							<option value="300">5 Minutos</option>
-							<option value="600">10 Minutos</option>
-							<option value="1200">20 Minutos</option>
+							<option value="60" data-i18n="min1">1 Minuto</option>
+							<option value="120" data-i18n="min2">2 Minutos</option>
+							<option value="180" selected data-i18n="min3">3 Minutos</option>
+							<option value="300" data-i18n="min5">5 Minutos</option>
+							<option value="600" data-i18n="min10">10 Minutos</option>
+							<option value="1200" data-i18n="min20">20 Minutos</option>
 						</select>
 					</div>
-					<p class="menu-hint">Partidas mais longas dão mais moedas.</p>
+					<p class="menu-hint" data-i18n="longMatchHint">Partidas mais longas dão mais moedas.</p>
 
-					<button class="btn-start" id="btnStartMain" onclick="startGame()">Começar Jogo</button>
+					<button class="btn-start" id="btnStartMain" onclick="startGame()" data-i18n="startGame">Começar Jogo</button>
 					<div class="btn-row" style="margin-top:8px">
-						<button type="button" class="btn-sec gold" onclick="claimDailyReward()">🎁 Diária (21h)</button>
+						<button type="button" class="btn-sec gold" onclick="claimDailyReward()" data-i18n="dailyReward">🎁 Diária (21h)</button>
 						<button type="button" class="btn-sec" onclick="sellAccount()">💸 Vender conta</button>
 					</div>
 					<div id="dailyHint" class="menu-hint"></div>
@@ -1425,88 +1585,96 @@
 				<!-- ===== SEÇÃO CONFIG ===== -->
 				<div class="menu-section" id="secSettings">
 					<details class="settings-panel" id="settingsPanel" open>
-						<summary>⚙ Configurações</summary>
+						<summary data-i18n="settingsTitle">⚙ Configurações</summary>
+						<div class="menu-row" style="margin-top:8px">
+							<label data-i18n="langLabel">Idioma</label>
+							<select id="selLang" onchange="setLang(this.value)">
+								<option value="pt">Português</option>
+								<option value="en">English</option>
+							</select>
+						</div>
+						<p class="menu-hint" data-i18n="langHint">Detectado automaticamente; você pode trocar a qualquer momento.</p>
 
 						<details class="settings-sub" open>
-							<summary>🎮 Controles</summary>
+							<summary data-i18n="controlsTitle">🎮 Controles</summary>
 							<div class="menu-row">
-								<label>Modo Corrida:</label>
+								<label data-i18n="sprintMode">Modo Corrida:</label>
 								<select id="selSprintMode">
-									<option value="hold">1. Segurar Sprint</option>
-									<option value="tap" selected>2. Tocar em Sprint</option>
-									<option value="doubletap">3. Toque duplo no joystick</option>
+									<option value="hold" data-i18n="sprintHold">1. Segurar Sprint</option>
+									<option value="tap" selected data-i18n="sprintTap">2. Tocar em Sprint</option>
+									<option value="doubletap" data-i18n="sprintDouble">3. Toque duplo no joystick</option>
 								</select>
 							</div>
-							<p class="menu-hint" id="sprintModeHint">Toque no botão SPRINT para correr; solte o joystick para parar.</p>
+							<p class="menu-hint" id="sprintModeHint" data-i18n="sprintHintTap">Toque no botão SPRINT para correr; solte o joystick para parar.</p>
 							<div class="menu-row-check">
 								<label>
 									<input type="checkbox" id="chkMouseAim" checked>
-									PC: mirar cobrança com o mouse
+									<span data-i18n="mouseAim">PC: mirar cobrança com o mouse</span>
 								</label>
 							</div>
 							<div class="menu-row-check">
 								<label>
 									<input type="checkbox" id="chkFlatButtons">
-									Deitar botões (familiar...)
+									<span data-i18n="flatButtons">Deitar botões (familiar...)</span>
 								</label>
 							</div>
 							<div class="menu-row-check">
 								<label>
 									<input type="checkbox" id="chkSprintLeft">
-									Sprint contrário (sprint na esquerda)
+									<span data-i18n="sprintLeft">Sprint contrário (sprint na esquerda)</span>
 								</label>
 							</div>
 						</details>
 
 						<details class="settings-sub">
-							<summary>🎨 Gráficos</summary>
+							<summary data-i18n="gfxTitle">🎨 Gráficos</summary>
 							<div class="menu-row-check">
 								<label>
 									<input type="checkbox" id="chkEnhancedGfx" checked>
-									Gráficos melhorados (estádio, rastro, altura)
+									<span data-i18n="gfxEnhanced">Gráficos melhorados (estádio, rastro, altura)</span>
 								</label>
 							</div>
 							<div class="menu-row-check">
 								<label>
 									<input type="checkbox" id="chkExtraGfx" checked>
-									Gráficos extras (listras, mini-mapa, suor)
+									<span data-i18n="gfxExtra">Gráficos extras (listras, mini-mapa, suor)</span>
 								</label>
 							</div>
 						</details>
 
 						<details class="settings-sub">
-							<summary>📋 Regras</summary>
+							<summary data-i18n="rulesTitle">📋 Regras</summary>
 							<div class="menu-row">
-								<label>Clima:</label>
+								<label data-i18n="weather">Clima:</label>
 								<select id="selWeather">
-									<option value="random" selected>Aleatório (RNG)</option>
-									<option value="clear">☀ Ensolarado</option>
-									<option value="cloudy">☁ Nublado</option>
-									<option value="windy">💨 Ventoso</option>
-									<option value="rain">🌧 Chuva</option>
-									<option value="night">🌙 Noite</option>
-									<option value="storm">⛈ Tempestade</option>
+									<option value="random" selected data-i18n="wRandom">Aleatório (RNG)</option>
+									<option value="clear" data-i18n="wClear">☀ Ensolarado</option>
+									<option value="cloudy" data-i18n="wCloudy">☁ Nublado</option>
+									<option value="windy" data-i18n="wWindy">💨 Ventoso</option>
+									<option value="rain" data-i18n="wRain">🌧 Chuva</option>
+									<option value="night" data-i18n="wNight">🌙 Noite</option>
+									<option value="storm" data-i18n="wStorm">⛈ Tempestade</option>
 								</select>
 							</div>
-							<p class="menu-hint">Vento muda a trajetória da bola. Chuva: escorrega. Noite: escuro.</p>
+							<p class="menu-hint" data-i18n="weatherHint">Vento muda a trajetória da bola. Chuva: escorrega. Noite: escuro.</p>
 							<div class="menu-row">
-								<label>Velocidade dos jogadores:</label>
+								<label data-i18n="playerSpeed">Velocidade dos jogadores:</label>
 								<select id="selSpeed">
-									<option value="0.8">Lento</option>
-									<option value="1.0" selected>Normal</option>
-									<option value="1.3">Rápido</option>
+									<option value="0.8" data-i18n="speedSlow">Lento</option>
+									<option value="1.0" selected data-i18n="speedNormal">Normal</option>
+									<option value="1.3" data-i18n="speedFast">Rápido</option>
 								</select>
 							</div>
 							<div class="menu-row-check">
 								<label>
 									<input type="checkbox" id="chkOffside" checked>
-									Impedimento
+									<span data-i18n="offside">Impedimento</span>
 								</label>
 							</div>
 							<div class="menu-row-check">
 								<label>
 									<input type="checkbox" id="chkAutoSub">
-									Substituição automática (cansados → reserva)
+									<span data-i18n="autoSub">Substituição automática (cansados → reserva)</span>
 								</label>
 							</div>
 						</details>
@@ -1518,12 +1686,12 @@
 		<!-- MENU ELENCO (separado) -->
 		<div id="squadOverlay">
 			<div class="squad-top">
-				<h2>Elenco & Formação</h2>
+				<h2 data-i18n="squadTitle">Elenco & Formação</h2>
 				<label style="color:#aaa;font-size:12px">Formação
 					<select id="sqFormSelect" onchange="onSquadFormationChange()"></select>
 				</label>
 				<span style="color:#ffd700;font-weight:bold">🪙 <span id="sqCoinDisplay">0</span></span>
-				<button type="button" class="close-sq" onclick="closeSquadMenu()">Fechar ✕</button>
+				<button type="button" class="close-sq" onclick="closeSquadMenu()" data-i18n="close">Fechar ✕</button>
 			</div>
 			<div class="squad-body">
 				<div class="squad-pitch-wrap">
@@ -1615,10 +1783,10 @@
 		<!-- Pausa -->
 		<div id="pauseOverlay">
 			<div class="pause-box">
-				<h2>Pausa</h2>
-				<button type="button" class="btn-start" onclick="resumeGame()">Continuar</button>
-				<button type="button" class="btn-sec" style="width:100%;margin:8px 0" onclick="openSubMenu()">Substituição</button>
-				<button type="button" class="btn-sec" style="width:100%;margin:8px 0;border-color:#ff8a65;color:#ff8a65" onclick="quitMatch()">Sair da partida</button>
+				<h2 data-i18n="pause">Pausa</h2>
+				<button type="button" class="btn-start" onclick="resumeGame()" data-i18n="resume">Continuar</button>
+				<button type="button" class="btn-sec" style="width:100%;margin:8px 0" onclick="openSubMenu()" data-i18n="substitution">Substituição</button>
+				<button type="button" class="btn-sec" style="width:100%;margin:8px 0;border-color:#ff8a65;color:#ff8a65" onclick="quitMatch()" data-i18n="quitMatch">Sair da partida</button>
 				<div id="subMenu" style="display:none;margin-top:10px;text-align:left;max-height:40vh;overflow-y:auto"></div>
 			</div>
 		</div>
@@ -2425,18 +2593,7 @@
 			renderAchievements();
 		})();
 
-		const selSprintMode = document.getElementById("selSprintMode");
-		const sprintModeHint = document.getElementById("sprintModeHint");
-		const sprintHints = {
-			hold: "Segure o botão SPRINT para correr; solte para parar.",
-			tap: "Toque no botão SPRINT para correr; solte o joystick para parar.",
-			doubletap: "Toque 2x no centro do joystick, solte, depois empurre na direção. Botão SPRINT fica oculto."
-		};
-		if (selSprintMode) {
-			selSprintMode.addEventListener("change", () => {
-				sprintModeHint.textContent = sprintHints[selSprintMode.value] || "";
-			});
-		}
+		// sprint mode hint + settings load/save bound after I18N (see loadGameSettings)
 
 		// Troca: toque = mais próximo da bola | segurar = goleiro
 		(function setupSwitchButton() {
@@ -2851,37 +3008,371 @@
 		let aiCrossChance = 0.07;
 		let aiSlideChance = 0.04;
 
+		// ========== CrazyGames SDK ==========
+		const CG = {
+			ready: false,
+			env: "disabled",
+			_initPromise: null,
+			async _waitForSdk(timeoutMs) {
+				const t0 = Date.now();
+				while (Date.now() - t0 < (timeoutMs || 4000)) {
+					if (window.CrazyGames && window.CrazyGames.SDK && typeof window.CrazyGames.SDK.init === "function") {
+						return true;
+					}
+					await new Promise(r => setTimeout(r, 50));
+				}
+				return !!(window.CrazyGames && window.CrazyGames.SDK);
+			},
+			async init() {
+				if (this.ready) return true;
+				if (this._initPromise) return this._initPromise;
+				this._initPromise = (async () => {
+					try {
+						const ok = await this._waitForSdk(4000);
+						if (!ok || !window.CrazyGames || !window.CrazyGames.SDK) {
+							this.env = "disabled";
+							this.ready = false;
+							return false;
+						}
+						await window.CrazyGames.SDK.init();
+						this.ready = true;
+						try {
+							this.env = window.CrazyGames.SDK.environment || "crazygames";
+						} catch (e) {
+							this.env = "crazygames";
+						}
+						console.log("[CG] SDK ready · env:", this.env);
+						return true;
+					} catch (e) {
+						console.warn("[CG] init failed", e);
+						this.ready = false;
+						this.env = "disabled";
+						return false;
+					}
+				})();
+				return this._initPromise;
+			},
+			_game() {
+				if (!this.ready) return null;
+				try { return window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.game; } catch (e) { return null; }
+			},
+			_ad() {
+				if (!this.ready) return null;
+				try { return window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.ad; } catch (e) { return null; }
+			},
+			loadingStart() {
+				if (!this.ready) return;
+				try { const g = this._game(); if (g && typeof g.loadingStart === "function") g.loadingStart(); } catch (e) {}
+			},
+			loadingStop() {
+				if (!this.ready) return;
+				try { const g = this._game(); if (g && typeof g.loadingStop === "function") g.loadingStop(); } catch (e) {}
+			},
+			gameplayStart() {
+				if (!this.ready) return;
+				try { const g = this._game(); if (g && typeof g.gameplayStart === "function") g.gameplayStart(); } catch (e) {}
+			},
+			gameplayStop() {
+				if (!this.ready) return;
+				try { const g = this._game(); if (g && typeof g.gameplayStop === "function") g.gameplayStop(); } catch (e) {}
+			},
+			happytime() {
+				if (!this.ready) return;
+				try { const g = this._game(); if (g && typeof g.happytime === "function") g.happytime(); } catch (e) {}
+			},
+			/** Midgame ad (after match). Safe no-op if unavailable. */
+			requestMidgameAd() {
+				return new Promise((resolve) => {
+					if (!this.ready) { resolve(false); return; }
+					const ad = this._ad();
+					if (!ad || typeof ad.requestAd !== "function") { resolve(false); return; }
+					try {
+						ad.requestAd("midgame", {
+							adStarted: () => { try { this.gameplayStop(); } catch (e) {} },
+							adFinished: () => { resolve(true); },
+							adError: () => { resolve(false); }
+						});
+					} catch (e) {
+						resolve(false);
+					}
+				});
+			}
+		};
+
 		// ========== PROGRESSÃO BETA (moedas, elenco, dificuldades) ==========
 		const BETA_KEY = "soccerBetaProg_v6";
-		const NATIONALITIES = [
-			{ id: "BR", flag: "🇧🇷", name: "Brasil" },
-			{ id: "AR", flag: "🇦🇷", name: "Argentina" },
-			{ id: "UY", flag: "🇺🇾", name: "Uruguai" },
-			{ id: "PT", flag: "🇵🇹", name: "Portugal" },
-			{ id: "ES", flag: "🇪🇸", name: "Espanha" },
-			{ id: "FR", flag: "🇫🇷", name: "França" },
-			{ id: "IT", flag: "🇮🇹", name: "Itália" },
-			{ id: "DE", flag: "🇩🇪", name: "Alemanha" },
-			{ id: "ENG", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", name: "Inglaterra" },
-			{ id: "JP", flag: "🇯🇵", name: "Japão" },
-			{ id: "KR", flag: "🇰🇷", name: "Coreia" },
-			{ id: "US", flag: "🇺🇸", name: "EUA" },
-			{ id: "MX", flag: "🇲🇽", name: "México" },
-			{ id: "NG", flag: "🇳🇬", name: "Nigéria" },
-			{ id: "SN", flag: "🇸🇳", name: "Senegal" },
-			{ id: "HR", flag: "🇭🇷", name: "Croácia" },
-			{ id: "NL", flag: "🇳🇱", name: "Holanda" },
-			{ id: "BE", flag: "🇧🇪", name: "Bélgica" }
-		];
-		const CARD_TIERS = {
-			basico:   { id: "basico", label: "Básico", cls: "tier-basico", min: 50, max: 58 },
-			bronze:   { id: "bronze", label: "Bronze", cls: "tier-bronze", min: 55, max: 68 },
-			prata:    { id: "prata", label: "Prata", cls: "tier-prata", min: 65, max: 78 },
-			ouro:     { id: "ouro", label: "Ouro", cls: "tier-ouro", min: 75, max: 88 },
-			evento:   { id: "evento", label: "Evento", cls: "tier-evento", min: 80, max: 92 },
-			especial: { id: "especial", label: "Especial", cls: "tier-especial", min: 85, max: 95 },
-			lenda:    { id: "lenda", label: "Lenda", cls: "tier-lenda", min: 90, max: 99 }
+		const GAME_NAME = "Simple Soccer Ball";
+
+		// ===== Idioma (detecção automática + troca manual) =====
+		function detectLang() {
+			try {
+				const saved = localStorage.getItem("ssb_lang");
+				if (saved === "pt" || saved === "en") return saved;
+			} catch (e) {}
+			const nav = (navigator.language || navigator.userLanguage || "en").toLowerCase();
+			if (nav.startsWith("pt")) return "pt";
+			return "en";
+		}
+		let LANG = detectLang();
+		const I18N = {
+			pt: {
+				fullscreen: "Tela Cheia ⛶", blue: "AZUL", red: "VERMELHO",
+				yourOff: "Sua Ofensiva", aiMent: "IA Adversária",
+				navGame: "⚽ Jogo", navSquad: "👥 Elenco", navSettings: "⚙ Config",
+				navHint: "PC: <b>Q</b> / <b>E</b> troca seção", matchMode: "Modo de partida",
+				friendlyTitle: "🎮 Amistoso", friendlyDesc: "Escolha a dificuldade e jogue livre.",
+				leagueTitle: "🏆 Liga / Torneio", leagueDesc: "Partidas da carreira (região, nacional…).",
+				difficulty: "Dificuldade:", diffHint: "Vença para liberar o próximo nível.",
+				duration: "Duração:", min1: "1 Minuto", min2: "2 Minutos", min3: "3 Minutos",
+				min5: "5 Minutos", min10: "10 Minutos", min20: "20 Minutos",
+				longMatchHint: "Partidas mais longas dão mais moedas.",
+				startGame: "Começar Jogo", dailyReward: "🎁 Diária (21h)",
+				langLabel: "Idioma", langPt: "Português", langEn: "English",
+				langHint: "Detectado automaticamente; você pode trocar a qualquer momento.",
+				squadTitle: "Elenco & Formação", close: "Fechar ✕", coins: "Moedas",
+				neutral: "Neutro", attack: "Ataque", defend: "Defesa",
+				endWin: "Vitória!", endLose: "Derrota!", endDraw: "Empate!",
+				extraTime: "Acréscimo", welcome: "Bem-vindo ao Simple Soccer Ball!",
+				settingsTitle: "⚙ Configurações", controlsTitle: "🎮 Controles",
+				sprintMode: "Modo Corrida:", sprintHold: "1. Segurar Sprint",
+				sprintTap: "2. Tocar em Sprint", sprintDouble: "3. Toque duplo no joystick",
+				sprintHintHold: "Segure o botão SPRINT para correr; solte para parar.",
+				sprintHintTap: "Toque no botão SPRINT para correr; solte o joystick para parar.",
+				sprintHintDouble: "Toque 2x no centro do joystick, solte, depois empurre na direção. Botão SPRINT fica oculto.",
+				mouseAim: "PC: mirar cobrança com o mouse",
+				flatButtons: "Deitar botões (familiar...)",
+				sprintLeft: "Sprint contrário (sprint na esquerda)",
+				gfxTitle: "🎨 Gráficos",
+				gfxEnhanced: "Gráficos melhorados (estádio, rastro, altura)",
+				gfxExtra: "Gráficos extras (listras, mini-mapa, suor)",
+				rulesTitle: "📋 Regras", weather: "Clima:",
+				wRandom: "Aleatório (RNG)", wClear: "☀ Ensolarado", wCloudy: "☁ Nublado",
+				wWindy: "💨 Ventoso", wRain: "🌧 Chuva", wNight: "🌙 Noite", wStorm: "⛈ Tempestade",
+				weatherHint: "Vento muda a trajetória da bola. Chuva: escorrega. Noite: escuro.",
+				playerSpeed: "Velocidade dos jogadores:",
+				speedSlow: "Lento", speedNormal: "Normal", speedFast: "Rápido",
+				offside: "Impedimento", autoSub: "Substituição automática (cansados → reserva)",
+				pause: "Pausa", resume: "Continuar", quitMatch: "Sair da partida",
+				substitution: "Substituição",
+				formation: "Formação", teamTab: "Time", marketTab: "Mercado"
+			},
+			en: {
+				fullscreen: "Fullscreen ⛶", blue: "BLUE", red: "RED",
+				yourOff: "Your Attack", aiMent: "Opponent AI",
+				navGame: "⚽ Match", navSquad: "👥 Squad", navSettings: "⚙ Settings",
+				navHint: "PC: <b>Q</b> / <b>E</b> switch section", matchMode: "Match mode",
+				friendlyTitle: "🎮 Friendly", friendlyDesc: "Pick a difficulty and play freely.",
+				leagueTitle: "🏆 League / Cup", leagueDesc: "Career matches (regional, national…).",
+				difficulty: "Difficulty:", diffHint: "Win to unlock the next level.",
+				duration: "Duration:", min1: "1 Minute", min2: "2 Minutes", min3: "3 Minutes",
+				min5: "5 Minutes", min10: "10 Minutes", min20: "20 Minutes",
+				longMatchHint: "Longer matches award more coins.",
+				startGame: "Kick Off", dailyReward: "🎁 Daily (9 PM)",
+				langLabel: "Language", langPt: "Português", langEn: "English",
+				langHint: "Detected automatically; you can change it anytime.",
+				squadTitle: "Squad & Formation", close: "Close ✕", coins: "Coins",
+				neutral: "Neutral", attack: "Attack", defend: "Defend",
+				endWin: "Victory!", endLose: "Defeat!", endDraw: "Draw!",
+				extraTime: "Stoppage", welcome: "Welcome to Simple Soccer Ball!",
+				settingsTitle: "⚙ Settings", controlsTitle: "🎮 Controls",
+				sprintMode: "Sprint mode:", sprintHold: "1. Hold Sprint",
+				sprintTap: "2. Tap Sprint", sprintDouble: "3. Double-tap joystick",
+				sprintHintHold: "Hold SPRINT to run; release to stop.",
+				sprintHintTap: "Tap SPRINT to run; ease off the joystick to stop.",
+				sprintHintDouble: "Double-tap joystick center, release, then push direction. SPRINT button is hidden.",
+				mouseAim: "PC: aim set pieces with the mouse",
+				flatButtons: "Flat buttons (classic layout)",
+				sprintLeft: "Swap sprint side (sprint on the left)",
+				gfxTitle: "🎨 Graphics",
+				gfxEnhanced: "Enhanced graphics (stadium, trail, height)",
+				gfxExtra: "Extra graphics (stripes, minimap, sweat)",
+				rulesTitle: "📋 Rules", weather: "Weather:",
+				wRandom: "Random (RNG)", wClear: "☀ Sunny", wCloudy: "☁ Cloudy",
+				wWindy: "💨 Windy", wRain: "🌧 Rain", wNight: "🌙 Night", wStorm: "⛈ Storm",
+				weatherHint: "Wind changes ball path. Rain: slippery. Night: darker pitch.",
+				playerSpeed: "Player speed:",
+				speedSlow: "Slow", speedNormal: "Normal", speedFast: "Fast",
+				offside: "Offside", autoSub: "Auto substitutions (tired → bench)",
+				pause: "Pause", resume: "Resume", quitMatch: "Quit match",
+				substitution: "Substitution",
+				formation: "Formation", teamTab: "Team", marketTab: "Market"
+			}
 		};
+		function t(key) {
+			const pack = I18N[LANG] || I18N.en;
+			return (pack && pack[key] != null) ? pack[key] : ((I18N.en && I18N.en[key]) || key);
+		}
+		function setLang(code) {
+			LANG = (code === "pt") ? "pt" : "en";
+			try { localStorage.setItem("ssb_lang", LANG); } catch (e) {}
+			document.documentElement.lang = LANG === "pt" ? "pt-BR" : "en";
+			applyI18n();
+			try { saveGameSettings(); } catch (e) {}
+		}
+		function applyI18n() {
+			document.title = GAME_NAME;
+			const brand = document.getElementById("gameBrandTitle");
+			if (brand) brand.textContent = GAME_NAME;
+			const mt = document.getElementById("menuTitle");
+			if (mt && (!mt.dataset.locked)) mt.textContent = GAME_NAME;
+			document.querySelectorAll("[data-i18n]").forEach(el => {
+				const k = el.getAttribute("data-i18n");
+				if (!k) return;
+				const val = t(k);
+				if (el.tagName === "INPUT" || el.tagName === "TEXTAREA") el.placeholder = val;
+				else if (el.tagName === "OPTION") el.textContent = val;
+				else el.innerHTML = val;
+			});
+			const langSel = document.getElementById("selLang");
+			if (langSel) langSel.value = LANG;
+			// Dica do modo sprint conforme idioma + valor atual
+			const sm = document.getElementById("selSprintMode");
+			const hint = document.getElementById("sprintModeHint");
+			if (sm && hint) {
+				const map = { hold: "sprintHintHold", tap: "sprintHintTap", doubletap: "sprintHintDouble" };
+				hint.textContent = t(map[sm.value] || "sprintHintTap");
+			}
+		}
+
+		// ===== Configurações persistentes =====
+		const SETTINGS_KEY = "ssb_settings_v1";
+		function saveGameSettings() {
+			const data = {
+				lang: LANG,
+				sprintMode: (document.getElementById("selSprintMode") || {}).value || "tap",
+				mouseAim: !!(document.getElementById("chkMouseAim") || {}).checked,
+				flatButtons: !!(document.getElementById("chkFlatButtons") || {}).checked,
+				sprintLeft: !!(document.getElementById("chkSprintLeft") || {}).checked,
+				enhancedGfx: !!(document.getElementById("chkEnhancedGfx") || {}).checked,
+				extraGfx: !!(document.getElementById("chkExtraGfx") || {}).checked,
+				weather: (document.getElementById("selWeather") || {}).value || "random",
+				speed: (document.getElementById("selSpeed") || {}).value || "1.0",
+				offside: !!(document.getElementById("chkOffside") || {}).checked,
+				autoSub: !!(document.getElementById("chkAutoSub") || {}).checked,
+				matchTime: (document.getElementById("selTime") || {}).value || "180"
+			};
+			try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(data)); } catch (e) {}
+		}
+		function loadGameSettings() {
+			let data = null;
+			try { data = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null"); } catch (e) {}
+			if (!data || typeof data !== "object") return;
+			const setVal = (id, v) => {
+				const el = document.getElementById(id);
+				if (!el || v == null) return;
+				if (el.type === "checkbox") el.checked = !!v;
+				else el.value = String(v);
+			};
+			if (data.lang === "pt" || data.lang === "en") {
+				LANG = data.lang;
+				try { localStorage.setItem("ssb_lang", LANG); } catch (e) {}
+			}
+			setVal("selSprintMode", data.sprintMode);
+			setVal("chkMouseAim", data.mouseAim);
+			setVal("chkFlatButtons", data.flatButtons);
+			setVal("chkSprintLeft", data.sprintLeft);
+			setVal("chkEnhancedGfx", data.enhancedGfx != null ? data.enhancedGfx : true);
+			setVal("chkExtraGfx", data.extraGfx != null ? data.extraGfx : true);
+			setVal("selWeather", data.weather);
+			setVal("selSpeed", data.speed);
+			setVal("chkOffside", data.offside != null ? data.offside : true);
+			setVal("chkAutoSub", data.autoSub);
+			setVal("selTime", data.matchTime);
+			const langSel = document.getElementById("selLang");
+			if (langSel) langSel.value = LANG;
+		}
+		function bindSettingsAutosave() {
+			const ids = [
+				"selSprintMode", "chkMouseAim", "chkFlatButtons", "chkSprintLeft",
+				"chkEnhancedGfx", "chkExtraGfx", "selWeather", "selSpeed",
+				"chkOffside", "chkAutoSub", "selTime", "selDifficulty"
+			];
+			ids.forEach(id => {
+				const el = document.getElementById(id);
+				if (!el) return;
+				el.addEventListener("change", () => {
+					if (id === "selSprintMode") {
+						const hint = document.getElementById("sprintModeHint");
+						const map = { hold: "sprintHintHold", tap: "sprintHintTap", doubletap: "sprintHintDouble" };
+						if (hint) hint.textContent = t(map[el.value] || "sprintHintTap");
+					}
+					saveGameSettings();
+				});
+			});
+		}
+
+		const NATIONALITIES = [
+			{ id: "BR", flag: "🇧🇷", name: "Brasil", nameEn: "Brazil" },
+			{ id: "AR", flag: "🇦🇷", name: "Argentina", nameEn: "Argentina" },
+			{ id: "UY", flag: "🇺🇾", name: "Uruguai", nameEn: "Uruguay" },
+			{ id: "PT", flag: "🇵🇹", name: "Portugal", nameEn: "Portugal" },
+			{ id: "ES", flag: "🇪🇸", name: "Espanha", nameEn: "Spain" },
+			{ id: "FR", flag: "🇫🇷", name: "França", nameEn: "France" },
+			{ id: "IT", flag: "🇮🇹", name: "Itália", nameEn: "Italy" },
+			{ id: "DE", flag: "🇩🇪", name: "Alemanha", nameEn: "Germany" },
+			{ id: "ENG", flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", name: "Inglaterra", nameEn: "England" },
+			{ id: "JP", flag: "🇯🇵", name: "Japão", nameEn: "Japan" },
+			{ id: "KR", flag: "🇰🇷", name: "Coreia do Sul", nameEn: "South Korea" },
+			{ id: "US", flag: "🇺🇸", name: "EUA", nameEn: "USA" },
+			{ id: "MX", flag: "🇲🇽", name: "México", nameEn: "Mexico" },
+			{ id: "NG", flag: "🇳🇬", name: "Nigéria", nameEn: "Nigeria" },
+			{ id: "SN", flag: "🇸🇳", name: "Senegal", nameEn: "Senegal" },
+			{ id: "HR", flag: "🇭🇷", name: "Croácia", nameEn: "Croatia" },
+			{ id: "NL", flag: "🇳🇱", name: "Países Baixos", nameEn: "Netherlands" },
+			{ id: "BE", flag: "🇧🇪", name: "Bélgica", nameEn: "Belgium" },
+			{ id: "CO", flag: "🇨🇴", name: "Colômbia", nameEn: "Colombia" },
+			{ id: "GH", flag: "🇬🇭", name: "Gana", nameEn: "Ghana" }
+		];
+		// Nomes coerentes com a nacionalidade (sem “Igor sul-coreano”)
+		const NAME_POOLS = {
+			BR: { f: ["Thiago","Gabriel","Rafael","Lucas","Matheus","Pedro","Bruno","Felipe","Caio","Vitor","André","Diego","Marcos","Leandro","Gustavo","Rodrigo","Danilo","Everton","Wesley","Ronaldo"], l: ["Silva","Santos","Oliveira","Souza","Lima","Costa","Ferreira","Almeida","Pereira","Rodrigues","Nascimento","Carvalho","Gomes","Martins","Araújo","Ribeiro","Barbosa","Rocha","Dias","Mendes"] },
+			AR: { f: ["Facundo","Joaquín","Matías","Santiago","Nicolás","Lautaro","Gonzalo","Emiliano","Franco","Agustín","Julián","Ezequiel","Lucas","Pablo","Leandro"], l: ["González","Rodríguez","Fernández","López","Martínez","García","Pérez","Romero","Díaz","Álvarez","Torres","Castro","Suárez","Moreno","Sánchez"] },
+			UY: { f: ["Federico","Maximiliano","Sebastián","Matías","Diego","Luis","Cristian","Nicolás","Pablo","Gastón"], l: ["Suárez","Pereira","Rodríguez","Silva","González","Fernández","Cabrera","López","Martínez","Giménez"] },
+			PT: { f: ["João","André","Rui","Tiago","Pedro","Miguel","Nuno","Bruno","Ricardo","Diogo","Fábio","Gonçalo"], l: ["Silva","Santos","Ferreira","Pereira","Oliveira","Costa","Martins","Rodrigues","Sousa","Almeida","Carvalho","Lopes"] },
+			ES: { f: ["Álvaro","Pablo","Carlos","Javier","Sergio","Iker","Unai","Aitor","Diego","Marc","Pedri","Nico","Hugo","Dani"], l: ["García","Rodríguez","González","Fernández","López","Martínez","Sánchez","Pérez","Gómez","Martín","Jiménez","Ruiz","Hernández","Díaz"] },
+			FR: { f: ["Kylian","Antoine","Ousmane","N'Golo","Karim","Olivier","Paul","Hugo","Benjamin","Raphaël","Jules","Enzo","Lucas","Theo"], l: ["Dupont","Martin","Bernard","Petit","Robert","Richard","Durand","Moreau","Simon","Laurent","Lefebvre","Michel","Garcia","David"] },
+			IT: { f: ["Marco","Luca","Alessandro","Matteo","Lorenzo","Andrea","Francesco","Giovanni","Nicola","Stefano","Federico","Simone","Paolo"], l: ["Rossi","Russo","Ferrari","Esposito","Bianchi","Romano","Colombo","Ricci","Marino","Greco","Bruno","Gallo","Conti","De Luca"] },
+			DE: { f: ["Jonas","Lukas","Niklas","Tobias","Felix","Leon","Maximilian","Tim","Julian","Kai","Marco","Thomas","Florian"], l: ["Müller","Schmidt","Schneider","Fischer","Weber","Meyer","Wagner","Becker","Schulz","Hoffmann","Schäfer","Koch","Bauer","Richter"] },
+			ENG: { f: ["Harry","Jack","Oliver","James","George","Charlie","Thomas","Callum","Jamie","Mason","Reece","Jude","Phil","Kyle"], l: ["Smith","Jones","Williams","Brown","Taylor","Wilson","Johnson","Walker","Wright","Robinson","Thompson","White","Harris","Clarke"] },
+			JP: { f: ["Hiroshi","Takumi","Kenji","Yuki","Sota","Haruto","Riku","Daiki","Shota","Kaito","Ren","Yuto","Akira","Makoto"], l: ["Tanaka","Suzuki","Sato","Takahashi","Watanabe","Ito","Yamamoto","Nakamura","Kobayashi","Kato","Yoshida","Yamada","Sasaki","Yamaguchi"] },
+			KR: { f: ["Min-jae","Heung-min","Ji-sung","Sung-yueng","Jae-sung","Seung-ho","Hyun-jun","Dong-gook","Ki-sung","Sang-woo","Joon-ho","Young-gwon"], l: ["Kim","Lee","Park","Choi","Jung","Kang","Cho","Yoon","Jang","Lim","Han","Oh","Seo","Shin"] },
+			US: { f: ["Mason","Tyler","Jordan","Chris","Alex","Dylan","Ethan","Noah","Landon","Caleb","Brandon","Austin","Hunter"], l: ["Johnson","Williams","Brown","Jones","Miller","Davis","Wilson","Anderson","Taylor","Thomas","Moore","Jackson","Martin","Lee"] },
+			MX: { f: ["Diego","Carlos","José","Luis","Miguel","Javier","Raúl","Héctor","Andrés","Guillermo","Hirving","Edson"], l: ["Hernández","García","Martínez","López","González","Pérez","Rodríguez","Sánchez","Ramírez","Torres","Flores","Rivera"] },
+			NG: { f: ["Chukwueze","Odion","Wilfred","Victor","Ahmed","Kelechi","Samuel","Taiwo","Obafemi","Henry","Mikel","John"], l: ["Okafor","Balogun","Adebayor","Okonkwo","Ibrahim","Musa","Yusuf","Ogbonna","Nwosu","Eze","Ogunleye","Bassey"] },
+			SN: { f: ["Sadio","Kalidou","Ismaïla","Édouard","Boulaye","Pape","Iliman","Cheikhou","Keita","Moussa"], l: ["Mané","Koulibaly","Sarr","Mendy","Dia","Gueye","Cissé","Ndiaye","Diop","Fall","Ba","Sow"] },
+			HR: { f: ["Luka","Ivan","Mateo","Mario","Ante","Josip","Nikola","Domagoj","Marcelo","Bruno"], l: ["Modrić","Perišić","Rakitić","Kovačić","Brozović","Mandžukić","Rebić","Vlašić","Juranović","Livaković"] },
+			NL: { f: ["Virgil","Memphis","Frenkie","Matthijs","Cody","Donyell","Steven","Daley","Georginio","Wout"], l: ["de Jong","de Ligt","van Dijk","Bergwijn","Depay","Blind","Klaassen","Wijnaldum","Malen","Gakpo"] },
+			BE: { f: ["Eden","Kevin","Romelu","Thibaut","Youri","Axel","Leandro","Timothy","Dries","Michy"], l: ["Hazard","De Bruyne","Lukaku","Courtois","Tielemans","Witsel","Carrasco","Meunier","Mertens","Batshuayi"] },
+			CO: { f: ["James","Radamel","Juan","Davinson","Luis","Duván","Carlos","Yerry","Mateus","Luis Díaz"], l: ["Rodríguez","Falcao","Cuadrado","Sánchez","Muriel","Zapata","Mina","Uribe","Quintero","Bacca"] },
+			GH: { f: ["Thomas","André","Jordan","Asamoah","Sulley","Michael","Christian","Kwesi","Samuel","Richmond"], l: ["Partey","Ayew","Mensah","Boateng","Appiah","Essien","Gyan","Asante","Owusu","Ofori"] }
+		};
+		function natDisplayName(nat) {
+			if (!nat) return "";
+			return LANG === "en" ? (nat.nameEn || nat.name) : nat.name;
+		}
+		function nameForNationality(nat) {
+			const id = (nat && nat.id) || "BR";
+			const pool = NAME_POOLS[id] || NAME_POOLS.BR;
+			const f = pool.f[Math.floor(Math.random() * pool.f.length)];
+			const l = pool.l[Math.floor(Math.random() * pool.l.length)];
+			// Coreia / Japão: sobrenome primeiro soa natural em listagens latinas ainda usamos "Nome Sobrenome"
+			return f + " " + l;
+		}
+		const CARD_TIERS = {
+			basico:   { id: "basico", label: "Básico", labelEn: "Basic", cls: "tier-basico", min: 50, max: 58 },
+			bronze:   { id: "bronze", label: "Bronze", labelEn: "Bronze", cls: "tier-bronze", min: 55, max: 68 },
+			prata:    { id: "prata", label: "Prata", labelEn: "Silver", cls: "tier-prata", min: 65, max: 78 },
+			ouro:     { id: "ouro", label: "Ouro", labelEn: "Gold", cls: "tier-ouro", min: 75, max: 88 },
+			evento:   { id: "evento", label: "Evento", labelEn: "Event", cls: "tier-evento", min: 80, max: 92 },
+			especial: { id: "especial", label: "Especial", labelEn: "Special", cls: "tier-especial", min: 85, max: 95 },
+			lenda:    { id: "lenda", label: "Lenda", labelEn: "Legend", cls: "tier-lenda", min: 90, max: 99 }
+		};
+		function tierLabelOf(tier) {
+			if (!tier) return "";
+			const tObj = typeof tier === "string" ? CARD_TIERS[tier] : tier;
+			if (!tObj) return String(tier);
+			return LANG === "en" ? (tObj.labelEn || tObj.label) : tObj.label;
+		}
 		function randomNationality() {
 			return NATIONALITIES[Math.floor(Math.random() * NATIONALITIES.length)];
 		}
@@ -3078,8 +3569,6 @@
 		}
 
 		function generateMarketOffer() {
-			const first = MARKET_DB.firstNames[Math.floor(Math.random() * MARKET_DB.firstNames.length)];
-			const last = MARKET_DB.lastNames[Math.floor(Math.random() * MARKET_DB.lastNames.length)];
 			const prefPos = MARKET_DB.positions[Math.floor(Math.random() * MARKET_DB.positions.length)];
 			const isGk = prefPos === "GOL";
 			// Evento NÃO aparece no mercado — só em eventos
@@ -3110,7 +3599,7 @@
 			const nat = randomNationality();
 			return {
 				uid: "m_" + Date.now().toString(36) + "_" + Math.floor(Math.random() * 1e6),
-				name: first + " " + last,
+				name: nameForNationality(nat),
 				role: isGk ? "gk" : "field",
 				line: lineOfPos(prefPos),
 				prefPos,
@@ -3714,20 +4203,9 @@
 			alert("Recompensa: +" + formatCoins(r.coins || 0) + "🪙 e +" + (r.clubXp || 0) + " XP do clube!");
 		}
 
-		const ACADEMY_FIRST = [
-			"Thiago", "Rafael", "Gabriel", "Lucas", "Matheus", "Pedro", "Bruno", "Felipe",
-			"João", "Enzo", "Nicolas", "Arthur", "Davi", "Samuel", "Heitor", "Bernardo",
-			"Lorenzo", "Miguel", "Caio", "Igor", "Kaique", "Vitor", "Gustavo", "Murilo"
-		];
-		const ACADEMY_LAST = [
-			"Nascimento", "Andrade", "Ribeiro", "Carvalho", "Monteiro", "Barbosa", "Ferreira",
-			"Almeida", "Rocha", "Campos", "Azevedo", "Moura", "Pacheco", "Siqueira",
-			"Vasconcelos", "Tavares", "Figueiredo", "Queiroz", "Sampaio", "Peixoto"
-		];
-		function academySpecialName() {
-			const a = ACADEMY_FIRST[Math.floor(Math.random() * ACADEMY_FIRST.length)];
-			const b = ACADEMY_LAST[Math.floor(Math.random() * ACADEMY_LAST.length)];
-			return a + " " + b;
+		function academySpecialName(natHint) {
+			const nat = natHint || NATIONALITIES.find(n => n.id === "BR") || randomNationality();
+			return nameForNationality(nat);
 		}
 
 		// Ao nascer especial da base: libera um básico, ou oferece contrato barato
@@ -3913,6 +4391,7 @@
 		function pauseGame() {
 			if (gameState !== "playing") return;
 			gameState = "paused";
+			try { CG.gameplayStop(); } catch (e) {}
 			const ov = document.getElementById("pauseOverlay");
 			if (ov) ov.classList.add("open");
 			const sub = document.getElementById("subMenu");
@@ -3922,6 +4401,7 @@
 		function resumeGame() {
 			if (gameState !== "paused") return;
 			gameState = "playing";
+			try { CG.gameplayStart(); } catch (e) {}
 			const ov = document.getElementById("pauseOverlay");
 			if (ov) ov.classList.remove("open");
 		}
@@ -4667,8 +5147,6 @@
 			for (let i = 0; i < nZg; i++) rosterSlots.push(zgPos[i % zgPos.length]);
 			for (let i = 0; i < nMid; i++) rosterSlots.push(midPos[i % midPos.length]);
 			for (let i = 0; i < nAtt; i++) rosterSlots.push(attPos[i % attPos.length]);
-			const namesA = ["André", "Lucas", "Rafael", "Bruno", "Pedro", "Caio", "Igor", "Yuri", "Enzo", "Theo", "Davi", "Miguel", "Heitor", "Kai", "Noah", "Samuel", "Luan", "Felipe", "Vitor", "Murilo"];
-			const namesB = ["Silva", "Mota", "Dias", "Lopes", "Viana", "Mendes", "Costa", "Rocha", "Alves", "Souza", "Torres", "Gomes", "Neri", "Prado", "Reis", "Cardoso", "Barbosa", "Nunes", "Pinto", "Teixeira"];
 			const idxs = rosterSlots.map((_, i) => i);
 			for (let i = idxs.length - 1; i > 0; i--) {
 				const j = Math.floor(Math.random() * (i + 1));
@@ -4676,6 +5154,7 @@
 			}
 			const prataSet = new Set([idxs[0]]);
 			const bronzeSet = new Set(idxs.slice(1, 4));
+			const usedNames = new Set();
 			const roster = [];
 			rosterSlots.forEach((pos, i) => {
 				const role = pos === "GOL" ? "gk" : "field";
@@ -4684,9 +5163,24 @@
 				if (prataSet.has(i)) tier = "prata";
 				else if (bronzeSet.has(i)) tier = "bronze";
 				const attrs = rollAttrsForTier(keys, tier, null);
-				const nm = namesA[i % namesA.length] + " " + namesB[(i * 3) % namesB.length];
+				// Elenco inicial: maioria da região do clube (se BR, nomes BR etc.)
+				let nat = randomNationality();
+				if (typeof setupData !== "undefined" && setupData && setupData.region) {
+					const regMap = { brasil: "BR", espanha: "ES", eua: "US", japao: "JP" };
+					const prefer = regMap[setupData.region] || "BR";
+					if (Math.random() < 0.72) {
+						nat = NATIONALITIES.find(n => n.id === prefer) || nat;
+					}
+				} else if (Math.random() < 0.55) {
+					nat = NATIONALITIES.find(n => n.id === "BR") || nat;
+				}
+				let nm = nameForNationality(nat);
+				let guard = 0;
+				while (usedNames.has(nm) && guard++ < 20) nm = nameForNationality(nat);
+				usedNames.add(nm);
 				const p = makeRosterPlayer(nm, role, pos, attrs);
 				p.id = i;
+				p.nat = nat;
 				p.cardTier = tier;
 				p.contract = { type: "matches", remaining: 50, total: 50, template: "longo" };
 				roster.push(p);
@@ -4785,7 +5279,8 @@
 			"earthisnotflat": { type: "coins", amount: 100000, label: "earthisNOTflat" },
 			"rippele": { type: "player", label: "rippele" },
 			"sixseven": { type: "coins", amount: 1, label: "sixseven" },
-			"poopplayer": { type: "poop", label: "poopplayer" }
+			"poopplayer": { type: "poop", label: "poopplayer" },
+			"crazygames": { type: "coins", amount: 10000, label: "crazygames" }
 		};
 		function openSecretCode() {
 			if (!beta.redeemedCodes) beta.redeemedCodes = {};
@@ -5406,6 +5901,7 @@
 		let squadTab = "xi";
 		let squadSelectedId = null;
 		let dragRosterId = null;
+		let suppressSquadCardClick = false; // após arrastar, não abrir detalhe
 
 		function openSquadMenu() {
 			processPendingOffers();
@@ -5508,7 +6004,7 @@
 				</div>
 				<div class="pc-info">
 					<div class="pc-name">${nat.flag} ${p.name}${isStar ? " ⭐" : ""}</div>
-					<div class="pc-meta">${pos} · ${tier.label} · ${nat.name}${isStar ? " · Estrela" : ""}${inj}</div>
+					<div class="pc-meta">${pos} · ${tierLabelOf(tier)} · ${natDisplayName(nat)}${isStar ? (LANG === "en" ? " · Star" : " · Estrela") : ""}${inj}</div>
 					<div class="pc-meta" style="font-size:10px;opacity:0.9">${focus}</div>
 					<div class="pc-val">${formatCoins(val)}🪙 · ${bond}</div>
 				</div>
@@ -6017,9 +6513,23 @@
 				card.draggable = true;
 				card.ondragstart = (e) => {
 					dragRosterId = p.id;
+					suppressSquadCardClick = true;
 					e.dataTransfer.setData("text/roster-id", String(p.id));
 				};
-				card.onclick = () => selectSquadPlayer(p.id);
+				card.ondragend = () => {
+					// clique fantasma após drop
+					suppressSquadCardClick = true;
+					setTimeout(() => { suppressSquadCardClick = false; }, 50);
+				};
+				card.onclick = (e) => {
+					if (suppressSquadCardClick) {
+						suppressSquadCardClick = false;
+						e.preventDefault();
+						e.stopPropagation();
+						return;
+					}
+					selectSquadPlayer(p.id);
+				};
 				list.appendChild(card);
 			});
 			if (!rows.length && squadTab !== "all" && squadTab !== "xi") list.innerHTML = "<div style='opacity:0.6;padding:12px'>Nenhum jogador nesta lista.</div>";
@@ -6062,7 +6572,7 @@
 			let html = buildPlayerCardHTML(p) +
 				`<div style="font-size:13px;font-weight:bold;margin:6px 0">${p.name}${isStar ? " ⭐ Estrela" : ""}</div>
 				<div style="font-size:12px;margin:4px 0 8px;padding:6px;background:rgba(255,215,0,0.08);border-radius:6px;border:1px solid #665500">
-					${nat.flag} ${nat.name} · Natural: <b style="color:#ffd700">${POS_LABEL[pref] || pref}</b> · ${tier.label}
+					${nat.flag} ${natDisplayName(nat)} · ${LANG === "en" ? "Natural" : "Natural"}: <b style="color:#ffd700">${POS_LABEL[pref] || pref}</b> · ${tierLabelOf(tier)}
 				</div>
 				<div style="font-size:11px;margin-bottom:6px">Nível <b>${lv}</b> · XP ${xp}/${need}
 					<div style="height:6px;background:#222;border-radius:3px;margin-top:3px"><div style="height:100%;width:${Math.min(100, xp/need*100)}%;background:#ffd700;border-radius:3px"></div></div>
@@ -6702,6 +7212,50 @@
 		}
 
 		let matchJerseyAlt = false;
+		function applyClubColorsToLoader() {
+			const c1 = (beta && beta.teamColors && beta.teamColors.primary) || "#ffd700";
+			const c2 = (beta && beta.teamColors && beta.teamColors.secondary) || "#66bb6a";
+			const fill = document.getElementById("hexFill");
+			const bar = document.getElementById("bootBarFill");
+			const grad = "linear-gradient(135deg, " + c1 + " 0%, " + c2 + " 55%, " + c1 + " 100%)";
+			if (fill) fill.style.background = grad;
+			if (bar) bar.style.background = "linear-gradient(90deg, " + c1 + ", " + c2 + ")";
+		}
+		function showBootLoader(ms, thenFn) {
+			const el = document.getElementById("bootLoader");
+			if (!el) { if (thenFn) thenFn(); return; }
+			applyClubColorsToLoader();
+			// Só chama SDK se já estiver pronto (nunca antes do init)
+			if (CG.ready) { try { CG.loadingStart(); } catch (e) {} }
+			el.classList.remove("hide");
+			el.style.display = "flex";
+			el.style.opacity = "1";
+			const bar = document.getElementById("bootBarFill");
+			if (bar) {
+				bar.style.animation = "none";
+				void bar.offsetWidth;
+				bar.style.animation = "bootBar " + ((ms || 1200) / 1000) + "s ease-out forwards";
+			}
+			const fill = document.getElementById("hexFill");
+			if (fill) {
+				fill.style.animation = "none";
+				void fill.offsetWidth;
+				fill.style.animation = "hexLoadDiag " + ((ms || 1200) / 1000) + "s ease-in-out infinite";
+			}
+			setTimeout(() => {
+				el.classList.add("hide");
+				setTimeout(() => { el.style.display = "none"; }, 380);
+				if (CG.ready) { try { CG.loadingStop(); } catch (e) {} }
+				if (thenFn) thenFn();
+			}, ms || 1200);
+		}
+		function setTutorialMenuOnly(onMenu) {
+			const tutBtn = document.getElementById("tutorialBtn");
+			const tutPanel = document.getElementById("tutorialPanel");
+			if (tutBtn) tutBtn.classList.toggle("hidden-ingame", !onMenu);
+			if (!onMenu && tutPanel) tutPanel.classList.remove("open");
+		}
+
 		function startGame() {
 			const banMs = getPlayBanRemainingMs();
 			if (banMs > 0) {
@@ -6713,6 +7267,10 @@
 				try { localStorage.removeItem("soccerBetaPlayBanUntil"); } catch (e) {}
 				saveBeta();
 			}
+			// Loading com cores do clube antes de entrar em campo
+			showBootLoader(1100, () => startGameAfterLoad());
+		}
+		function startGameAfterLoad() {
 			// 40% chance de usar camisa secundária (adversário fica na oposta)
 			matchJerseyAlt = Math.random() < 0.4;
 			let dur = parseInt(document.getElementById("selTime").value);
@@ -6820,6 +7378,7 @@
 			}
 			if (canvas) canvas.style.visibility = "visible";
 			document.getElementById("mobileControls").classList.add("active");
+			setTutorialMenuOnly(false);
 			// Flash de início
 			try {
 				const flash = document.createElement("div");
@@ -6893,6 +7452,7 @@
 
 			gameState = "playing";
 			lastTick = Date.now();
+			try { CG.gameplayStart(); } catch (e) {}
 			
 			initPositions(true);
 			// Delay inicial antes do apito / pontapé (3s)
@@ -6950,8 +7510,14 @@
 
 		function endGame() {
 			gameState = "menu";
+			try { CG.gameplayStop(); } catch (e) {}
 			document.getElementById("mobileControls").classList.remove("active");
+			setTutorialMenuOnly(true);
 			mobile.active = false;
+			// Anúncio midgame ocasional (não bloqueia o menu)
+			try {
+				if (Math.random() < 0.35) CG.requestMidgameAd();
+			} catch (e) {}
 			resetJoystick();
 			mobile.sprintActive = false;
 			mobile.sprintBtn = false;
@@ -8121,6 +8687,8 @@
 		}
 
 		function registerGoal(scoringTeam) {
+			// Momento especial para a plataforma
+			try { if (scoringTeam === 1) CG.happytime(); } catch (e) {}
 			let scorer = lastTouchPlayer;
 			if (!scorer || scorer.team !== scoringTeam) {
 				let best = null, bestD = Infinity;
@@ -8613,25 +9181,24 @@
 				const gr = goalReplay;
 				if (gr.phase === "play") {
 					gr.sub++;
-					// Replay mais lento e “maior” (zoom)
+					// Replay mais rápido + zoom menor (vê mais campo)
 					const prog = gr.idx / Math.max(1, gr.frames.length - 1);
-					const slow = prog > 0.75 ? 7 : (prog > 0.5 ? 6 : 5);
+					const slow = prog > 0.75 ? 3 : (prog > 0.5 ? 2 : 2);
 					if (gr.sub >= slow) { gr.sub = 0; gr.idx++; }
 					if (gr.idx >= gr.frames.length) {
 						gr.phase = "hold";
-						gr.hold = gr.kind === "offside" ? 70 : 60;
+						gr.hold = gr.kind === "offside" ? 45 : 40;
 						gr.idx = gr.frames.length - 1;
 					}
 					const fr = gr.frames[Math.min(gr.idx, gr.frames.length - 1)];
 					if (fr) {
-						// Zoom ~1.45: enquadra menos campo = bola/jogadores maiores
-						const zoom = 1.45;
+						const zoom = 1.15;
 						const viewW = canvas.width / zoom;
 						const viewH = canvas.height / zoom;
 						const tx = fr.ball.x - viewW / 2;
 						const ty = fr.ball.y - viewH / 2;
-						camera.x += (tx - camera.x) * 0.2;
-						camera.y += (ty - camera.y) * 0.2;
+						camera.x += (tx - camera.x) * 0.28;
+						camera.y += (ty - camera.y) * 0.28;
 						camera.x = Math.max(0, Math.min(fieldWidth - viewW, camera.x));
 						camera.y = Math.max(0, Math.min(fieldHeight - viewH, camera.y));
 						gr.replayZoom = zoom;
@@ -10238,7 +10805,7 @@
 			const gr = goalReplay;
 			const fr = gr.frames[Math.min(gr.idx, gr.frames.length - 1)];
 			if (!fr) return;
-			const zoom = gr.replayZoom || 1.45;
+			const zoom = gr.replayZoom || 1.15;
 			ctx.save();
 			ctx.scale(zoom, zoom);
 			ctx.translate(-camera.x, -camera.y);
@@ -11086,11 +11653,28 @@
 		if (canvas && gameState === "menu") canvas.style.visibility = "hidden";
 		draw();
 		gameLoop();
-		// UI progressão beta
-		try {
-			updateCoinUI();
-			refreshDiffSelect();
-		} catch (e) { console.warn(e); }
+		// UI progressão beta + idioma + CrazyGames
+		(async function bootCG() {
+			// SEMPRE init antes de qualquer chamada ao SDK
+			try { await CG.init(); } catch (e) {}
+			try { CG.loadingStart(); } catch (e) {}
+			try {
+				loadGameSettings();
+				bindSettingsAutosave();
+				applyI18n();
+				updateCoinUI();
+				refreshDiffSelect();
+				setTutorialMenuOnly(true);
+			} catch (e) { console.warn(e); }
+			setTimeout(() => {
+				try { CG.loadingStop(); } catch (e) {}
+				const el = document.getElementById("bootLoader");
+				if (el) {
+					el.classList.add("hide");
+					setTimeout(() => { el.style.display = "none"; }, 400);
+				}
+			}, 1400);
+		})();
 	</script>
 </body>
 </html>
