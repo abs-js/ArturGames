@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<! possible new game >
+<!DOCTYPE html> <!possible new game>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
@@ -75,178 +74,135 @@ p.sub{font-size:11px;color:#636e72;margin-bottom:8px;font-weight:600;text-align:
 </head>
 <body>
 <div id="gameContainer">
-<canvas id="gameCanvas" width="1100" height="680"></canvas>
-<div id="timerDisplay">3:00</div>
-<button id="pauseBtn" onclick="togglePause()">⏸ PAUSE</button>
-<div id="pauseOverlay">
-<h2>PAUSADO</h2>
-<p>Pressione ESC ou P para continuar</p>
-<button class="btn-start" onclick="togglePause()">CONTINUAR</button>
-<button class="btn-nav" style="margin-top:10px" onclick="backToMenu()">SAIR PARA MENU</button>
-</div>
-<div id="hud">
+  <canvas id="gameCanvas" width="1100" height="680"></canvas>
+  <div id="timerDisplay">0:00</div>
+  <button id="pauseBtn" onclick="togglePause()">⏸ PAUSE</button>
+
+  <div id="pauseOverlay">
+    <h2>PAUSADO</h2>
+    <p>Pressione ESC ou P para continuar</p>
+    <button class="btn-start" onclick="togglePause()">CONTINUAR</button>
+    <button class="btn-nav" style="margin-top:10px" onclick="backToMenu()">SAIR PARA MENU</button>
+  </div>
+
+  <!-- HUD (status de vida) -->
+  <div id="hud">
     <div class="p-hud">P1 (<span id="nameP1">PUNCH-MAN</span>)<div class="state-tag" id="stP1"></div><span class="percent" id="p1Percent">0%</span><div class="stocks" id="stocksP1">Stocks: 3</div><div class="res-tag" id="resP1"></div></div>
     <div class="p-hud"><span id="lblP2">CPU</span> (<span id="nameP2">BUCKET-HEAD</span>)<div class="state-tag" id="stP2"></div><span class="percent" id="p2Percent">0%</span><div class="stocks" id="stocksP2">Stocks: 3</div><div class="res-tag" id="resP2"></div></div>
     <div class="p-hud" id="hudP3" style="display:none">CPU2 (<span id="nameP3">-</span>)<div class="state-tag" id="stP3"></div><span class="percent" id="p3Percent">0%</span><div class="stocks" id="stocksP3">Stocks: 3</div><div class="res-tag" id="resP3"></div></div>
     <div class="p-hud" id="hudP4" style="display:none">CPU3 (<span id="nameP4">-</span>)<div class="state-tag" id="stP4"></div><span class="percent" id="p4Percent">0%</span><div class="stocks" id="stocksP4">Stocks: 3</div><div class="res-tag" id="resP4"></div></div>
+  </div>
+
+  <!-- TELAS (irmãs do HUD, não dentro dele) -->
+  <div id="screenTitle" class="ui-screen active">
+    <h1>SUPER SMASH ARENA</h1>
+    <p class="sub">Final Edition • 12 Mapas • 12 Lutadores</p>
+    <button class="btn-start" onclick="goToScreen('players')">JOGAR</button>
+    <button class="btn-nav" style="margin-top:12px" onclick="goToScreen('settings')">CONFIGURAÇÕES</button>
+  </div>
+
+<div id="screenSettings" class="ui-screen">
+  <h2>Configurações</h2>
+  <div class="section" style="max-width:420px;margin:0 auto">
+    <div class="dev-options" style="display:flex;flex-wrap:wrap;justify-content:center;gap:8px 14px">
+      <label><input type="checkbox" id="chkHitboxes" onchange="saveConfig()"> Hitboxes</label>
+      <label><input type="checkbox" id="chkMinimap" checked onchange="saveConfig()"> Mini-mapa</label>
+      <label><input type="checkbox" id="chkShaders" checked onchange="saveConfig()"> Shaders</label>
+      <label><input type="checkbox" id="chkCombo" checked onchange="saveConfig()"> Combo Counter</label>
+      <label><input type="checkbox" id="chkShowHit" onchange="saveConfig()"> Show Hit</label>
+      <label><input type="checkbox" id="chkShield" onchange="saveConfig()"> Shielding (C / L)</label>
+    </div>
+    <p class="sub" style="margin-top:8px">Salvas automaticamente neste navegador</p>
+  </div>
+  <div class="nav-buttons">
+    <button class="btn-nav" onclick="goToScreen('title')">← Voltar</button>
+  </div>
 </div>
 
-<div id="screenTitle" class="ui-screen active"><h1>SUPER SMASH ARENA</h1><p class="sub">Final Edition • 12 Mapas • 12 Lutadores</p>
-<button class="btn-start" onclick="goToScreen('mode')">COMEÇAR</button>
-<div class="section" style="margin-top:12px;max-width:420px;margin-left:auto;margin-right:auto">
-<div class="section-title">Configurações</div>
-<div class="dev-options" style="display:flex;flex-wrap:wrap;justify-content:center;gap:6px 10px">
-<label><input type="checkbox" id="chkHitboxes" onchange="saveConfig()"> Hitboxes</label>
-<label><input type="checkbox" id="chkMinimap" checked onchange="saveConfig()"> Mini-mapa</label>
-<label><input type="checkbox" id="chkShaders" checked onchange="saveConfig()"> Shaders</label>
-<label><input type="checkbox" id="chkCombo" checked onchange="saveConfig()"> Combo Counter</label>
-<label><input type="checkbox" id="chkShowHit" onchange="saveConfig()"> Show Hit <span style="color:#e94560;font-size:9px">(⚠ lag 4P)</span></label>
-<label><input type="checkbox" id="chkShield" onchange="saveConfig()"> Shielding (C / L)</label>
-</div>
-<p class="sub" style="margin-top:4px">Salvas automaticamente neste navegador</p>
-</div>
-</div>
+<div id="screenPlayers" class="ui-screen">
+  <h2>Seleção de Jogadores</h2>
+  <p class="sub">Clique em um personagem e depois no slot • ou arraste a ficha</p>
 
-<div id="screenMode" class="ui-screen"><h2>Modo de Jogo</h2><div class="mode-select"><button class="opt-btn selected" onclick="setMode(0)" id="btnVsCPU">1 Jogador (vs CPU)</button><button class="opt-btn" onclick="setMode(1)" id="btnVsP2">2 Jogadores</button><button class="opt-btn" onclick="setMode(2)" id="btn1v3">1 Humano + 3 CPUs</button></div><div class="nav-buttons"><button class="btn-nav" onclick="goToScreen('title')">← Voltar</button><button class="btn-nav" onclick="nextFromMode()">Próximo →</button></div></div>
+  <div class="fighter-select" id="charGrid" style="max-width:620px;margin:0 auto 12px">
+    <!-- preenchido via JS -->
+  </div>
 
-<div id="screenDifficulty" class="ui-screen"><h2>Dificuldade da IA</h2><div class="diff-select"><button class="opt-btn" onclick="setDifficulty('easy')" id="diffEasy">Fácil</button><button class="opt-btn selected" onclick="setDifficulty('medium')" id="diffMedium">Médio</button><button class="opt-btn" onclick="setDifficulty('hard')" id="diffHard">Difícil</button></div><div class="nav-buttons"><button class="btn-nav" onclick="goToScreen('mode')">← Voltar</button><button class="btn-nav" onclick="goToScreen('fighters')">Próximo →</button></div></div>
+  <div id="playerSlots" style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+    <!-- preenchido via JS -->
+  </div>
 
-<div id="screenFighters" class="ui-screen">
-<h2>Escolha os Lutadores</h2><p class="sub" style="margin-top:-4px">◀▶ na miniatura ou I/O = cosmético (Sem / Com / Alt) · clique o card para focar o slot</p>
-<div class="section"><div class="section-title">Jogador 1</div>
-<div class="fighter-row"><div class="preview-col">
-<canvas class="fighter-preview" id="previewP1" width="72" height="88" onclick="colorFocusP=1;cycleCosmetic(1,1)"></canvas>
-<div class="cos-btns"><button type="button" onclick="colorFocusP=1;cycleCosmetic(1,-1)">◀</button><button type="button" onclick="colorFocusP=1;cycleCosmetic(1,1)">▶</button></div>
-<div class="cos-label" id="cosLabel1">Sem</div>
-</div>
-<div class="fighter-select">
-<div class="fighter-card selected" onclick="selectFighter(0,1)" id="fCard0"><h4 style="color:#d63031">PUNCH-MAN</h4><p>X↑ Salto Fogo | X↓ Soco Chão</p></div>
-<div class="fighter-card" onclick="selectFighter(1,1)" id="fCard1"><h4 style="color:#e67e22">BUCKET-HEAD</h4><p>X↑ Paraquedas | X↓ Bomba</p></div>
-<div class="fighter-card" onclick="selectFighter(2,1)" id="fCard2"><h4 style="color:#0984e3">LITTLE-BOLT</h4><p>X↑ Pulo Elétrico | X↓ Raio</p></div>
-<div class="fighter-card" onclick="selectFighter(3,1)" id="fCard3"><h4 style="color:#8e44ad">SLASH-MAN</h4><p>X↑ Subida | X↓ Absorver</p></div>
-<div class="fighter-card" onclick="selectFighter(4,1)" id="fCard4"><h4 style="color:#00b894">SQUIRREL-VOLT</h4><p>X↑ Super Pulo | X↓ Trovoada</p></div>
-<div class="fighter-card" onclick="selectFighter(5,1)" id="fCard5"><h4 style="color:#74b9ff">FROZER-CHARP</h4><p>X↑ Tornado Frio | X↓ Cura</p></div>
-<div class="fighter-card" onclick="selectFighter(6,1)" id="fCard6"><h4 style="color:#e17055">BOMBY-BOY</h4><p>X↑ Isqueiro | X↓ Bomba</p></div>
-<div class="fighter-card" onclick="selectFighter(7,1)" id="fCard7"><h4 style="color:#a29bfe">DRAW-MAN</h4><p>X↑ Trampolim | X↓ Martelo</p></div>
-<div class="fighter-card" onclick="selectFighter(8,1)" id="fCard8"><h4 style="color:#95a5a6">STAR-ASTRONAUT</h4><p>X↑ Foguete | X↓ Escudo</p></div>
-<div class="fighter-card" onclick="selectFighter(9,1)" id="fCard9"><h4 style="color:#636e72">WHITE-MAN</h4><p>X↑ Pulo Poder | X↓ Soco Duro</p></div>
-<div class="fighter-card" onclick="selectFighter(10,1)" id="fCard10"><h4 style="color:#ffeaa7">STARRY</h4><p>X↑ Pulo Estrelar | X↓ Escudo</p></div>
-<div class="fighter-card" onclick="selectFighter(11,1)" id="fCard11"><h4 style="color:#2d3436">DARK-STREN</h4><p>X↑ Furação | X↓ Tremor</p></div>
-</div></div>
-<button class="opt-btn" onclick="randomFighter(1)" style="margin-top:4px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff;border-color:#6c5ce7">🎲 Lutador Aleatório</button>
-</div>
-<div class="section"><div class="section-title" id="p2Title">Lutador da CPU</div>
-<div class="fighter-row"><div class="preview-col">
-<canvas class="fighter-preview" id="previewP2" width="72" height="88" onclick="colorFocusP=2;cycleCosmetic(2,1)"></canvas>
-<div class="cos-btns"><button type="button" onclick="colorFocusP=2;cycleCosmetic(2,-1)">◀</button><button type="button" onclick="colorFocusP=2;cycleCosmetic(2,1)">▶</button></div>
-<div class="cos-label" id="cosLabel2">Sem</div>
-</div>
-<div class="fighter-select">
-<div class="fighter-card" onclick="selectFighter(0,2)" id="f2Card0"><h4 style="color:#d63031">PUNCH-MAN</h4></div>
-<div class="fighter-card selected" onclick="selectFighter(1,2)" id="f2Card1"><h4 style="color:#e67e22">BUCKET-HEAD</h4></div>
-<div class="fighter-card" onclick="selectFighter(2,2)" id="f2Card2"><h4 style="color:#0984e3">LITTLE-BOLT</h4></div>
-<div class="fighter-card" onclick="selectFighter(3,2)" id="f2Card3"><h4 style="color:#8e44ad">SLASH-MAN</h4></div>
-<div class="fighter-card" onclick="selectFighter(4,2)" id="f2Card4"><h4 style="color:#00b894">SQUIRREL-VOLT</h4></div>
-<div class="fighter-card" onclick="selectFighter(5,2)" id="f2Card5"><h4 style="color:#74b9ff">FROZER-CHARP</h4></div>
-<div class="fighter-card" onclick="selectFighter(6,2)" id="f2Card6"><h4 style="color:#e17055">BOMBY-BOY</h4></div>
-<div class="fighter-card" onclick="selectFighter(7,2)" id="f2Card7"><h4 style="color:#a29bfe">DRAW-MAN</h4></div>
-<div class="fighter-card" onclick="selectFighter(8,2)" id="f2Card8"><h4 style="color:#95a5a6">STAR-ASTRONAUT</h4></div>
-<div class="fighter-card" onclick="selectFighter(9,2)" id="f2Card9"><h4 style="color:#636e72">WHITE-MAN</h4></div>
-<div class="fighter-card" onclick="selectFighter(10,2)" id="f2Card10"><h4 style="color:#ffeaa7">STARRY</h4></div>
-<div class="fighter-card" onclick="selectFighter(11,2)" id="f2Card11"><h4 style="color:#2d3436">DARK-STREN</h4></div>
-</div></div>
-<button class="opt-btn" onclick="randomFighter(2)" style="margin-top:4px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff;border-color:#6c5ce7">🎲 Lutador Aleatório</button>
-</div>
-<div class="section" id="secP3" style="display:none"><div class="section-title">CPU 2</div>
-<div class="fighter-row"><div class="preview-col">
-<canvas class="fighter-preview" id="previewP3" width="72" height="88" onclick="colorFocusP=3;cycleCosmetic(3,1)"></canvas>
-<div class="cos-btns"><button type="button" onclick="colorFocusP=3;cycleCosmetic(3,-1)">◀</button><button type="button" onclick="colorFocusP=3;cycleCosmetic(3,1)">▶</button></div>
-<div class="cos-label" id="cosLabel3">Sem</div>
-</div>
-<div class="fighter-select">
-<div class="fighter-card" onclick="selectFighter(0,3)" id="f3Card0"><h4 style="color:#d63031">PUNCH-MAN</h4></div>
-<div class="fighter-card" onclick="selectFighter(1,3)" id="f3Card1"><h4 style="color:#e67e22">BUCKET-HEAD</h4></div>
-<div class="fighter-card selected" onclick="selectFighter(2,3)" id="f3Card2"><h4 style="color:#0984e3">LITTLE-BOLT</h4></div>
-<div class="fighter-card" onclick="selectFighter(3,3)" id="f3Card3"><h4 style="color:#8e44ad">SLASH-MAN</h4></div>
-<div class="fighter-card" onclick="selectFighter(4,3)" id="f3Card4"><h4 style="color:#00b894">SQUIRREL-VOLT</h4></div>
-<div class="fighter-card" onclick="selectFighter(5,3)" id="f3Card5"><h4 style="color:#74b9ff">FROZER-CHARP</h4></div>
-<div class="fighter-card" onclick="selectFighter(6,3)" id="f3Card6"><h4 style="color:#e17055">BOMBY-BOY</h4></div>
-<div class="fighter-card" onclick="selectFighter(7,3)" id="f3Card7"><h4 style="color:#a29bfe">DRAW-MAN</h4></div>
-<div class="fighter-card" onclick="selectFighter(8,3)" id="f3Card8"><h4 style="color:#95a5a6">STAR-ASTRONAUT</h4></div>
-<div class="fighter-card" onclick="selectFighter(9,3)" id="f3Card9"><h4 style="color:#636e72">WHITE-MAN</h4></div>
-<div class="fighter-card" onclick="selectFighter(10,3)" id="f3Card10"><h4 style="color:#ffeaa7">STARRY</h4></div>
-<div class="fighter-card" onclick="selectFighter(11,3)" id="f3Card11"><h4 style="color:#2d3436">DARK-STREN</h4></div>
-</div></div>
-<button class="opt-btn" onclick="randomFighter(3)" style="margin-top:4px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff;border-color:#6c5ce7">🎲 Lutador Aleatório</button>
-</div>
-<div class="section" id="secP4" style="display:none"><div class="section-title">CPU 3</div>
-<div class="fighter-row"><div class="preview-col">
-<canvas class="fighter-preview" id="previewP4" width="72" height="88" onclick="colorFocusP=4;cycleCosmetic(4,1)"></canvas>
-<div class="cos-btns"><button type="button" onclick="colorFocusP=4;cycleCosmetic(4,-1)">◀</button><button type="button" onclick="colorFocusP=4;cycleCosmetic(4,1)">▶</button></div>
-<div class="cos-label" id="cosLabel4">Sem</div>
-</div>
-<div class="fighter-select">
-<div class="fighter-card" onclick="selectFighter(0,4)" id="f4Card0"><h4 style="color:#d63031">PUNCH-MAN</h4></div>
-<div class="fighter-card" onclick="selectFighter(1,4)" id="f4Card1"><h4 style="color:#e67e22">BUCKET-HEAD</h4></div>
-<div class="fighter-card" onclick="selectFighter(2,4)" id="f4Card2"><h4 style="color:#0984e3">LITTLE-BOLT</h4></div>
-<div class="fighter-card selected" onclick="selectFighter(3,4)" id="f4Card3"><h4 style="color:#8e44ad">SLASH-MAN</h4></div>
-<div class="fighter-card" onclick="selectFighter(4,4)" id="f4Card4"><h4 style="color:#00b894">SQUIRREL-VOLT</h4></div>
-<div class="fighter-card" onclick="selectFighter(5,4)" id="f4Card5"><h4 style="color:#74b9ff">FROZER-CHARP</h4></div>
-<div class="fighter-card" onclick="selectFighter(6,4)" id="f4Card6"><h4 style="color:#e17055">BOMBY-BOY</h4></div>
-<div class="fighter-card" onclick="selectFighter(7,4)" id="f4Card7"><h4 style="color:#a29bfe">DRAW-MAN</h4></div>
-<div class="fighter-card" onclick="selectFighter(8,4)" id="f4Card8"><h4 style="color:#95a5a6">STAR-ASTRONAUT</h4></div>
-<div class="fighter-card" onclick="selectFighter(9,4)" id="f4Card9"><h4 style="color:#636e72">WHITE-MAN</h4></div>
-<div class="fighter-card" onclick="selectFighter(10,4)" id="f4Card10"><h4 style="color:#ffeaa7">STARRY</h4></div>
-<div class="fighter-card" onclick="selectFighter(11,4)" id="f4Card11"><h4 style="color:#2d3436">DARK-STREN</h4></div>
-</div></div>
-<button class="opt-btn" onclick="randomFighter(4)" style="margin-top:4px;background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff;border-color:#6c5ce7">🎲 Lutador Aleatório</button>
-</div>
-<div class="nav-buttons"><button class="btn-nav" onclick="backFromFighters()">← Voltar</button><button class="btn-nav" onclick="goToScreen('rules')">Próximo →</button></div>
+  <div class="nav-buttons">
+    <button class="btn-nav" onclick="goToScreen('title')">← Voltar</button>
+    <button class="btn-nav" onclick="goToScreen('rules')">Próximo →</button>
+  </div>
 </div>
 
 <div id="screenRules" class="ui-screen">
-<h2>Regras da Partida</h2>
-<div class="section"><div class="section-title">Tipo de Partida</div>
-<div class="mode-select"><button class="opt-btn selected" onclick="setGameType('stocks')" id="btnStocks">Stocks</button><button class="opt-btn" onclick="setGameType('time')" id="btnTime">Tempo</button><button class="opt-btn" onclick="setGameType('combo')" id="btnCombo">Combo Contest</button></div></div>
-<div class="section" id="stocksSection"><div class="section-title">Stocks</div>
-<div class="stock-select"><button class="opt-btn" onclick="setStocks(3)" id="stock3">3</button><button class="opt-btn selected" onclick="setStocks(5)" id="stock5">5</button><button class="opt-btn" onclick="setStocks(7)" id="stock7">7</button></div></div>
-<div class="section" id="timeSection" style="display:none"><div class="section-title">Duração</div>
-<div class="time-select"><button class="opt-btn" onclick="setTimeLimit(3)" id="time3">3 min</button><button class="opt-btn selected" onclick="setTimeLimit(5)" id="time5">5 min</button><button class="opt-btn" onclick="setTimeLimit(7)" id="time7">7 min</button></div></div>
-<div class="section" id="comboSection" style="display:none"><div class="section-title">Duração do Contest</div>
-<div class="time-select"><button class="opt-btn" onclick="setTimeLimit(1)" id="combo1">1 min</button><button class="opt-btn selected" onclick="setTimeLimit(2)" id="combo2">2 min</button><button class="opt-btn" onclick="setTimeLimit(3)" id="combo3">3 min</button></div></div>
-<div class="nav-buttons"><button class="btn-nav" onclick="goToScreen('fighters')">← Voltar</button><button class="btn-nav" onclick="goToScreen('map')">Próximo →</button></div>
+  <h2>Regras da Partida</h2>
+  <div class="section">
+    <div class="section-title">Tipo de Partida</div>
+    <div class="mode-select">
+      <button class="opt-btn selected" onclick="setGameType('stocks')" id="btnStocks">Stocks</button>
+      <button class="opt-btn" onclick="setGameType('time')" id="btnTime">Tempo</button>
+      <button class="opt-btn" onclick="setGameType('combo')" id="btnCombo">Combo Contest</button>
+    </div>
+  </div>
+  <div class="section" id="stocksSection">
+    <div class="section-title">Stocks</div>
+    <div class="stock-select">
+      <button class="opt-btn" onclick="setStocks(3)" id="stock3">3</button>
+      <button class="opt-btn selected" onclick="setStocks(5)" id="stock5">5</button>
+      <button class="opt-btn" onclick="setStocks(7)" id="stock7">7</button>
+    </div>
+  </div>
+  <div class="section" id="timeSection" style="display:none">
+    <div class="section-title">Duração</div>
+    <div class="time-select">
+      <button class="opt-btn" onclick="setTimeLimit(3)" id="time3">3 min</button>
+      <button class="opt-btn selected" onclick="setTimeLimit(5)" id="time5">5 min</button>
+      <button class="opt-btn" onclick="setTimeLimit(7)" id="time7">7 min</button>
+    </div>
+  </div>
+  <div class="section" id="comboSection" style="display:none">
+    <div class="section-title">Duração do Contest</div>
+    <div class="time-select">
+      <button class="opt-btn" onclick="setTimeLimit(1)" id="combo1">1 min</button>
+      <button class="opt-btn selected" onclick="setTimeLimit(2)" id="combo2">2 min</button>
+      <button class="opt-btn" onclick="setTimeLimit(3)" id="combo3">3 min</button>
+    </div>
+  </div>
+  <div class="nav-buttons">
+    <button class="btn-nav" onclick="goToScreen('players')">← Voltar</button>
+    <button class="btn-nav" onclick="goToScreen('map')">Próximo →</button>
+  </div>
 </div>
-
 <div id="screenMap" class="ui-screen">
-<h2>Escolha o Mapa</h2>
-<div class="map-select">
-<button class="opt-btn selected" onclick="selectMap(0)" id="mapBtn0">Batalha Grande</button>
-<button class="opt-btn" onclick="selectMap(1)" id="mapBtn1">Destino Final</button>
-<button class="opt-btn" onclick="selectMap(2)" id="mapBtn2">Ilhas Flutuantes</button>
-<button class="opt-btn" onclick="selectMap(3)" id="mapBtn3">Campo de Batalha</button>
-<button class="opt-btn" onclick="selectMap(4)" id="mapBtn4">Templo Vulcânico</button>
-<button class="opt-btn" onclick="selectMap(5)" id="mapBtn5">Castelo nas Nuvens</button>
-<button class="opt-btn" onclick="selectMap(6)" id="mapBtn6">Electro Mania</button>
-<button class="opt-btn" onclick="selectMap(7)" id="mapBtn7">Floresta</button>
-<button class="opt-btn" onclick="selectMap(8)" id="mapBtn8">Nave Espacial</button>
-<button class="opt-btn" onclick="selectMap(9)" id="mapBtn9">Casa de Madeira</button>
-<button class="opt-btn" onclick="selectMap(10)" id="mapBtn10">Papel</button>
-<button class="opt-btn" onclick="selectMap(11)" id="mapBtn11">Iceberg</button>
-<button class="opt-btn" onclick="randomMap()" id="mapBtnRandom" style="background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff;border-color:#6c5ce7">🎲 Aleatório</button>
-</div>
-<div id="mapPreview"></div>
-<div class="nav-buttons"><button class="btn-nav" onclick="goToScreen('rules')">← Voltar</button><button class="btn-start" onclick="startGame()">LUTAR!</button></div>
-</div>
-
-<div id="tierListOverlay" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(15,15,30,.95);z-index:30;overflow-y:auto;padding:16px;color:#fff;font-family:Segoe UI,sans-serif">
-<h2 style="text-align:center;color:#fdcb6e;margin-bottom:8px">⚔ TIER LIST SECRETA ⚔</h2>
-<p style="text-align:center;font-size:11px;color:#b2bec3;margin-bottom:12px">Pressione ESPAÇO para fechar</p>
-<div id="tierListContent" style="max-width:520px;margin:0 auto;font-size:13px;line-height:1.6"></div>
+  <h2>Escolha o Mapa</h2>
+  <div class="map-select">
+    <button class="opt-btn selected" onclick="selectMap(0)" id="mapBtn0">Batalha Grande</button>
+    <button class="opt-btn" onclick="selectMap(1)" id="mapBtn1">Destino Final</button>
+    <button class="opt-btn" onclick="selectMap(2)" id="mapBtn2">Ilhas Flutuantes</button>
+    <button class="opt-btn" onclick="selectMap(3)" id="mapBtn3">Campo de Batalha</button>
+    <button class="opt-btn" onclick="selectMap(4)" id="mapBtn4">Templo Vulcânico</button>
+    <button class="opt-btn" onclick="selectMap(5)" id="mapBtn5">Castelo nas Nuvens</button>
+    <button class="opt-btn" onclick="selectMap(6)" id="mapBtn6">Electro Mania</button>
+    <button class="opt-btn" onclick="selectMap(7)" id="mapBtn7">Floresta</button>
+    <button class="opt-btn" onclick="selectMap(8)" id="mapBtn8">Nave Espacial</button>
+    <button class="opt-btn" onclick="selectMap(9)" id="mapBtn9">Casa de Madeira</button>
+    <button class="opt-btn" onclick="selectMap(10)" id="mapBtn10">Papel</button>
+    <button class="opt-btn" onclick="selectMap(11)" id="mapBtn11">Iceberg</button>
+    <button class="opt-btn" onclick="randomMap()" id="mapBtnRandom" style="background:linear-gradient(135deg,#6c5ce7,#a29bfe);color:#fff;border-color:#6c5ce7">🎲 Aleatório</button>
+  </div>
+  <div id="mapPreview"></div>
+  <div class="nav-buttons">
+    <button class="btn-nav" onclick="goToScreen('rules')">← Voltar</button>
+    <button class="btn-start" onclick="startGame()">LUTAR!</button>
+  </div>
 </div>
 <div id="gameOverScreen" class="ui-screen">
-<div id="gameSetAnim" style="display:none;font-size:64px;font-weight:900;background:linear-gradient(90deg,#e94560,#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:4px;animation:gameSetPulse 0.8s ease-out;">GAME SET</div>
-<h2 id="winnerText" style="margin-top:12px;font-size:18px;line-height:1.5;max-width:92%;text-align:center;white-space:pre-line;">P1 VENCEU!</h2>
-<button class="btn-start" id="btnBackMenu" onclick="backToMenu()" style="display:none;">VOLTAR AO MENU</button>
+  <div id="gameSetAnim" style="display:none;font-size:64px;font-weight:900;background:linear-gradient(90deg,#e94560,#ff6b6b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;letter-spacing:4px;animation:gameSetPulse 0.8s ease-out;">GAME SET</div>
+  <h2 id="winnerText" style="margin-top:12px;font-size:18px;line-height:1.5;max-width:92%;text-align:center;white-space:pre-line;">P1 VENCEU!</h2>
+  <button class="btn-start" id="btnBackMenu" onclick="backToMenu()" style="display:none;">VOLTAR AO MENU</button>
 </div>
 </div>
 <style>
@@ -276,8 +232,8 @@ let gameRunning=false,countdownTimer=0,dramaticZoomTimer=0,slowMotionTimer=0,hit
 let isPaused=false,flashAlpha=0,vignetteStrength=0;
 const keys={},keyTapTime={};
 window.addEventListener('keydown',e=>{const k=e.key.toLowerCase();if(!keys[k])keyTapTime[k]=Date.now();keys[k]=true;if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();if((k==='escape'||k==='p')&&gameRunning){e.preventDefault();togglePause();}
-if(k===' '&&document.getElementById('screenFighters')?.classList.contains('active')){e.preventDefault();toggleTierList();}
-if(document.getElementById('screenFighters')?.classList.contains('active')){if(k==='i'){e.preventDefault();cycleCosmetic(colorFocusP,-1);}if(k==='o'){e.preventDefault();cycleCosmetic(colorFocusP,1);}}
+if(k===' '&&document.getElementById('screenPlayers')?.classList.contains('active')){e.preventDefault();toggleTierList();}
+if(document.getElementById('screenPlayers')?.classList.contains('active')){if(k==='i'){e.preventDefault();cycleSlotCosmetic(focusedSlot,-1);}if(k==='o'){e.preventDefault();cycleSlotCosmetic(focusedSlot,1);}}
 
 });
 window.addEventListener('keyup',e=>keys[e.key.toLowerCase()]=false);
@@ -286,10 +242,22 @@ if(!gameRunning&&!isPaused)return;
 isPaused=!isPaused;
 document.getElementById('pauseOverlay').classList.toggle('active',isPaused);
 document.getElementById('pauseBtn').innerText=isPaused?'▶ PLAY':'⏸ PAUSE';
-if(!isPaused)requestAnimationFrame(gameLoop);
 }
 
-function goToScreen(n){document.querySelectorAll('.ui-screen').forEach(s=>s.classList.remove('active'));const scr=document.getElementById('screen'+n.charAt(0).toUpperCase()+n.slice(1));if(scr){scr.classList.add('active');scr.scrollTop=0;}if(n==='map')drawMapPreview();if(n==='fighters'){updateP2Title();refreshAllPreviews();}}
+function goToScreen(n){
+  document.querySelectorAll('.ui-screen').forEach(s => s.classList.remove('active'));
+  const scr = document.getElementById('screen' + n.charAt(0).toUpperCase() + n.slice(1));
+  if(scr){
+    scr.classList.add('active');
+    scr.scrollTop = 0;
+  }
+  if(n === 'map') drawMapPreview();
+  if(n === 'players') initPlayersScreen();
+  if(n === 'fighters'){ // mantém compatibilidade se ainda existir
+    updateP2Title();
+    refreshAllPreviews();
+  }
+}
 function nextFromMode(){is2PMode?goToScreen('fighters'):goToScreen('difficulty');}
 function backFromFighters(){is2PMode?goToScreen('mode'):goToScreen('difficulty');}
 function setMode(m){
@@ -653,34 +621,118 @@ if(this.isFrozen||this.isBuried||this.hammerLanding>0||this.isParalyzed)return;
 const p1=this.playerNum===1,ku=p1?'arrowup':'w',kd=p1?'arrowdown':'s',kl=p1?'arrowleft':'a',kr=p1?'arrowright':'d',ka=p1?'z':'j',ks=p1?'x':'k',ksh=p1?'c':'l';
 if(this.shieldStun>0){this.shieldStun--;this.vx*=0.5;return;}
 if(this.isDodging)return;
-// Shield hold (C = P1, L = P2)
-if(config.enableShield&&keys[ksh]&&!this.isBurnout&&this.shieldHP>0&&this.dying<=0&&!this.isLedgeHanging&&!this.shieldStun){
-this.isShielding=true;this.shieldHold+=1;
-const decay=0.08+0.04*(1/Math.max(0.7,this.type.weight)); // lighter = decays a bit faster hold
-this.shieldHP-=decay;this.vx*=0.5;this.attackState=null;this.activeHitbox=null;
-// Quick left/right while shielding = dodge
-if((keys[kl]||keys[kr])&&!this.dodgeLock){
-this.dodgeLock=true;
-let dir=keys[kl]?-1:1;
-const df=DODGE_FRAMES[this.type.name]||{move:12,recover:12};
-if(df.troll){ // Bucket-Head: opposite + water splash
-spawnParticles(this.x+this.w/2,this.y+this.h/2,12,'#74b9ff');
-dir=-dir;
-}
-this.isShielding=false;this.isDodging=true;this.dodgePhase='move';this.dodgeTimer=df.move;this.dodgeDir=dir;this.dodgeInvuln=true;this.facing=dir;
-this.vx=dir*(120/Math.max(1,df.move));this.vy=0;this.dodgeTargetX=this.x+dir*120;
-if(df.spark)spawnParticles(this.x+this.w/2,this.y+this.h/2,10,'#fdcb6e');
-if(df.trail)this.dodgeTrail=4;
-return;
-}
-if(!keys[kl]&&!keys[kr])this.dodgeLock=false;
-if(this.shieldHP<=0||this.shieldHold>Math.floor(280+this.type.weight*40)){this.breakShield();return;}
-return;
-}else{this.isShielding=false;this.dodgeLock=false;if(!this.isBurnout&&this.shieldHP<this.shieldMax)this.shieldHP=Math.min(this.shieldMax,this.shieldHP+0.1*this.type.weight);}
+// ===== SHIELD + DODGE =====
+if(config.enableShield && keys[ksh] && !this.isBurnout && this.shieldHP > 0 && this.dying <= 0 && !this.isLedgeHanging && !this.shieldStun){
 
-if(this.isLedgeHanging){if(keys[ku]){this.isLedgeHanging=false;this.vy=-this.type.jumpForce*.95;this.vx=this.facing*3;this.ledgeCooldown=30;this.scaleX=.8;this.scaleY=1.2;}else if(keys[kd]){this.isLedgeHanging=false;this.vy=2;this.ledgeCooldown=25;}else if((this.facing===1&&keys[kr])||(this.facing===-1&&keys[kl])){this.isLedgeHanging=false;this.y-=25;this.vx=this.facing*4;this.ledgeCooldown=20;}return;}
-if(!this.isGrounded&&keys[kd]&&!this.fastFallLock&&this.vy>-1&&!this.attackState){this.isFastFalling=true;this.vy=Math.max(this.vy,11);this.fastFallLock=true;spawnParticles(this.x+this.w/2,this.y,4,'#0984e3');}
-if(!keys[kd])this.fastFallLock=false;
+  if(this.isGrounded){
+    // Escudo normal no chão
+    this.isShielding = true;
+    this.shieldHold += 1;
+    const decay = 0.08 + 0.04 * (1 / Math.max(0.7, this.type.weight));
+    this.shieldHP -= decay;
+    this.vx *= 0.5;
+    this.attackState = null;
+    this.activeHitbox = null;
+
+    // Dodge no chão
+    if((keys[kl] || keys[kr]) && !this.dodgeLock){
+      this.dodgeLock = true;
+      let dir = keys[kl] ? -1 : 1;
+      const df = DODGE_FRAMES[this.type.name] || {move:12, recover:12};
+
+      if(df.troll){ // Bucket-Head: joga água na direção original e vai pro oposto
+        const waterDir = dir;
+        projectiles.push(new Projectile(
+          this.x + (waterDir === 1 ? this.w : -22),
+          this.y + 5,
+          6.5 * waterDir, -1.8, 22, 18, 11, 4.2, -Math.PI/6, this, 'water'
+        ));
+        spawnParticles(this.x + this.w/2, this.y + this.h/2, 12, '#74b9ff');
+        dir = -dir;
+      }
+
+      this.isShielding = false;
+      this.isDodging = true;
+      this.dodgePhase = 'move';
+      this.dodgeTimer = df.move;
+      this.dodgeDir = dir;
+      this.dodgeInvuln = true;
+      this.facing = dir;
+      this.vx = dir * (120 / Math.max(1, df.move));
+      this.vy = 0;
+      if(df.spark) spawnParticles(this.x + this.w/2, this.y + this.h/2, 10, '#fdcb6e');
+      if(df.trail) this.dodgeTrail = 4;
+      return;
+    }
+    if(!keys[kl] && !keys[kr]) this.dodgeLock = false;
+
+    if(this.shieldHP <= 0 || this.shieldHold > Math.floor(280 + this.type.weight * 40)){
+      this.breakShield();
+      return;
+    }
+    return;
+
+  } else {
+    // Air-dodge (mais fraco)
+    this.isShielding = false;
+    if(!this.dodgeLock){
+      this.dodgeLock = true;
+      let dir = 0;
+      if(keys[kl]) dir = -1;
+      else if(keys[kr]) dir = 1;
+      else if(keys[kd]) dir = 0;
+
+      const df = DODGE_FRAMES[this.type.name] || {move:10, recover:12};
+      this.isDodging = true;
+      this.dodgePhase = 'move';
+      this.dodgeTimer = Math.floor(df.move * 0.7);
+      this.dodgeDir = dir || this.facing;
+      this.dodgeInvuln = true;
+      this.vx = (dir || this.facing) * 9;
+      this.vy = (dir === 0) ? 6 : -2;
+      this.isAirRecovery = true;
+      this.shieldHP = Math.max(0, this.shieldHP - 8);
+      spawnParticles(this.x + this.w/2, this.y + this.h/2, 8, '#74b9ff');
+    }
+    return;
+  }
+
+} else {
+  this.isShielding = false;
+  this.dodgeLock = false;
+  if(!this.isBurnout && this.shieldHP < this.shieldMax){
+    this.shieldHP = Math.min(this.shieldMax, this.shieldHP + 0.1 * this.type.weight);
+  }
+}
+
+// Continua o resto do handleInputs normalmente a partir daqui:
+if(this.isLedgeHanging){
+  if(keys[ku]){
+    this.isLedgeHanging=false;
+    this.vy=-this.type.jumpForce*.95;
+    this.vx=this.facing*3;
+    this.ledgeCooldown=30;
+    this.scaleX=.8;
+    this.scaleY=1.2;
+  }else if(keys[kd]){
+    this.isLedgeHanging=false;
+    this.vy=2;
+    this.ledgeCooldown=25;
+  }else if((this.facing===1&&keys[kr])||(this.facing===-1&&keys[kl])){
+    this.isLedgeHanging=false;
+    this.y-=25;
+    this.vx=this.facing*4;
+    this.ledgeCooldown=20;
+  }
+  return;
+}
+if(!this.isGrounded&&keys[kd]&&!this.fastFallLock&&this.vy>-1&&!this.attackState){
+  this.isFastFalling=true;
+  this.vy=Math.max(this.vy,11);
+  this.fastFallLock=true;
+  spawnParticles(this.x+this.w/2,this.y,4,'#0984e3');
+}
+if(!keys[kd]) this.fastFallLock=false;
 this.isCrouching=this.isGrounded&&keys[kd]&&!this.attackState&&this.passThroughTimer<=0;
 if(this.type.name==='Frozer-Charp'&&keys[ks]&&keys[kd]&&this.isGrounded&&this.healUsesLeft>0){this.healHoldTimer++;if(this.healHoldTimer>45){this.damage=Math.max(0,this.damage-35);this.healUsesLeft--;this.healHoldTimer=0;spawnIce(this.x+this.w/2,this.y+this.h/2);spawnParticles(this.x+this.w/2,this.y,20,'#74b9ff');}return;}else this.healHoldTimer=0;
 if(this.jumpSquat>0&&keys[ka]&&keys[ku]&&!this.isAirRecovery){this.jumpSquat=0;this.triggerAttack('up_smash');return;}
@@ -867,9 +919,32 @@ if(n==='Little-Bolt'){
  if(!alt){c.fillStyle='#fdcb6e';c.beginPath();c.moveTo(cx,top-10);c.lineTo(cx+5,top-2);c.lineTo(cx-2,top-2);c.lineTo(cx+3,top+6);c.lineTo(cx-5,top-4);c.lineTo(cx+2,top-4);c.closePath();c.fill();}
  else{c.strokeStyle='#fdcb6e';c.lineWidth=1.5;for(let i=0;i<3;i++){const ox=Math.sin(t+i)*4;c.beginPath();c.moveTo(this.x+4+i*8,top+8);c.lineTo(this.x+8+i*8+ox,top+dh/2);c.lineTo(this.x+4+i*8,top+dh-6);c.stroke();}}
 }
-else if(n==='Star-Astronaut'){
- if(!alt){c.fillStyle='#dfe6e9';c.beginPath();c.arc(cx,top+6,7,0,Math.PI*2);c.fill();c.strokeStyle='#636e72';c.lineWidth=1;c.stroke();c.fillStyle='rgba(100,180,255,.45)';c.beginPath();c.arc(cx,top+6,4,0,Math.PI*2);c.fill();}
- else{c.fillStyle='rgba(200,210,220,.55)';c.fillRect(this.x-2,top-2,this.w+4,dh+4);c.strokeStyle='#636e72';c.lineWidth=1;c.strokeRect(this.x-2,top-2,this.w+4,dh+4);c.fillStyle='#b2bec3';c.fillRect(this.x+this.w/2-4,top+dh,8,6);}
+else if(n === 'Star-Astronaut'){
+  if(!alt){
+    c.fillStyle = '#dfe6e9';
+    c.beginPath();
+    c.arc(cx, top + 10, 14, 0, Math.PI * 2);
+    c.fill();
+    c.strokeStyle = '#636e72';
+    c.lineWidth = 2;
+    c.stroke();
+    c.fillStyle = 'rgba(100,180,255,.55)';
+    c.beginPath();
+    c.arc(cx, top + 10, 10, 0, Math.PI * 2);
+    c.fill();
+    c.fillStyle = 'rgba(255,255,255,.4)';
+    c.beginPath();
+    c.arc(cx - 4, top + 6, 3, 0, Math.PI * 2);
+    c.fill();
+  } else {
+    c.fillStyle = 'rgba(200,210,220,.55)';
+    c.fillRect(this.x - 2, top - 2, this.w + 4, dh + 4);
+    c.strokeStyle = '#636e72';
+    c.lineWidth = 1;
+    c.strokeRect(this.x - 2, top - 2, this.w + 4, dh + 4);
+    c.fillStyle = '#b2bec3';
+    c.fillRect(this.x + this.w/2 - 4, top + dh, 8, 6);
+  }
 }
 else if(n==='Slash-Man'){
  if(!alt){const bob=Math.sin(t*2)*2;c.strokeStyle='#dfe6e9';c.lineWidth=2;c.beginPath();c.moveTo(this.facing===1?this.x+this.w:this.x,top+10+bob);c.lineTo(this.facing===1?this.x+this.w+10:this.x-10,top+dh/2);c.lineTo(this.facing===1?this.x+this.w:this.x,top+dh-8-bob);c.stroke();c.beginPath();c.moveTo(this.facing===1?this.x+this.w+2:this.x-2,top+14+bob);c.lineTo(this.facing===1?this.x+this.w+8:this.x-8,top+dh/2);c.stroke();}
@@ -1183,27 +1258,118 @@ showGameSet(msg.trim());
 }
 }
 function startGame(){
-saveConfig();
-const sp=STAGES[selectedMapIdx];
-p1=new Player(sp.spawnP1.x,sp.spawnP1.y,false,1,selectedFighterP1,selectedCosmeticP1);
-p2=new Player(sp.spawnP2.x,sp.spawnP2.y,!is2PMode||is1v3Mode,2,selectedFighterP2,selectedCosmeticP2);
-p3=null;p4=null;
-if(is1v3Mode){
-p3=new Player(Math.max(120,(sp.spawnP1.x+sp.spawnP2.x)/2-70),sp.spawnP1.y-40,true,3,selectedFighterP3,selectedCosmeticP3);
-p4=new Player(Math.min(1080,(sp.spawnP1.x+sp.spawnP2.x)/2+70),sp.spawnP2.y-40,true,4,selectedFighterP4,selectedCosmeticP4);
-document.getElementById('hudP3').style.display='block';document.getElementById('hudP4').style.display='block';
-}else{
-document.getElementById('hudP3').style.display='none';document.getElementById('hudP4').style.display='none';
-}
-players=[p1,p2,p3,p4].filter(Boolean);eliminationOrder=[];
-document.querySelectorAll('.ui-screen').forEach(s=>s.classList.remove('active'));document.getElementById('gameOverScreen').style.display='none';
-if(gameType==='time'||gameType==='combo'){matchTimeLeft=timeLimitMinutes*60*60;document.getElementById('timerDisplay').style.display='block';}else document.getElementById('timerDisplay').style.display='none';
-countdownTimer=180;dramaticZoomTimer=0;slowMotionTimer=0;particles=[];lightBeams=[];mapHazards=[];fruits=[];electroTimer=0;electroPillar=-1;flyingShip=null;shipSpawnCD=180;woodBreakTimer=0;woodBroken=false;paperErase=0;paperErasing=false;iceWindDir=1;iceWindTimer=0;// restore mutable stagesSTAGES[9].platforms=[{x:150,y:520,w:200,h:40,solid:true,color:"#8d6e63"},{x:850,y:520,w:200,h:40,solid:true,color:"#8d6e63"},{x:350,y:520,w:500,h:40,solid:true,color:"#a1887f",woodMid:true},{x:280,y:360,w:180,h:14,solid:false,color:"#bcaaa4"},{x:740,y:360,w:180,h:14,solid:false,color:"#bcaaa4"}];STAGES[10].platforms=[{x:250,y:500,w:800,h:36,solid:true,color:"#2d3436",paperMain:true},{x:400,y:360,w:200,h:12,solid:false,color:"#b2bec3"},{x:700,y:360,w:200,h:12,solid:false,color:"#b2bec3"}];
-isSuddenDeath=false;suddenDeathActive=false;isPaused=false;flashAlpha=0;hitStopTimer=0;
-document.getElementById('pauseBtn').style.display='block';
-document.getElementById('pauseOverlay').classList.remove('active');
-document.getElementById('pauseBtn').innerText='⏸ PAUSE';
-gameRunning=true;requestAnimationFrame(gameLoop);
+  saveConfig();
+
+  // Lê os slots
+  selectedFighterP1 = slots[0].fighter;
+  selectedCosmeticP1 = slots[0].cosmetic || 0;
+  selectedFighterP2 = slots[1].fighter;
+  selectedCosmeticP2 = slots[1].cosmetic || 0;
+  selectedFighterP3 = slots[2].fighter;
+  selectedCosmeticP3 = slots[2].cosmetic || 0;
+  selectedFighterP4 = slots[3].fighter;
+  selectedCosmeticP4 = slots[3].cosmetic || 0;
+
+  is2PMode = (slots[1].type === 'player');
+  is1v3Mode = (slots[2].type !== 'off' || slots[3].type !== 'off');
+
+  // Dificuldade da IA
+  const firstCpu = slots.find(s => s.type === 'cpu');
+  if(firstCpu){
+    if(firstCpu.level === 'random') cpuDifficulty = ['easy','medium','hard'][Math.floor(Math.random()*3)];
+    else if(firstCpu.level <= 3) cpuDifficulty = 'easy';
+    else if(firstCpu.level <= 6) cpuDifficulty = 'medium';
+    else cpuDifficulty = 'hard';
+  }
+
+  const sp = STAGES[selectedMapIdx];
+
+  // Cria os players
+  p1 = new Player(sp.spawnP1.x, sp.spawnP1.y, false, 1, selectedFighterP1, selectedCosmeticP1);
+  p2 = new Player(sp.spawnP2.x, sp.spawnP2.y, slots[1].type !== 'player', 2, selectedFighterP2, selectedCosmeticP2);
+
+  p3 = null;
+  p4 = null;
+
+  if(slots[2].type !== 'off'){
+    p3 = new Player(
+      Math.max(120, (sp.spawnP1.x + sp.spawnP2.x)/2 - 70),
+      sp.spawnP1.y - 40,
+      true, 3, selectedFighterP3, selectedCosmeticP3
+    );
+    document.getElementById('hudP3').style.display = 'block';
+  } else {
+    document.getElementById('hudP3').style.display = 'none';
+  }
+
+  if(slots[3].type !== 'off'){
+    p4 = new Player(
+      Math.min(1080, (sp.spawnP1.x + sp.spawnP2.x)/2 + 70),
+      sp.spawnP2.y - 40,
+      true, 4, selectedFighterP4, selectedCosmeticP4
+    );
+    document.getElementById('hudP4').style.display = 'block';
+  } else {
+    document.getElementById('hudP4').style.display = 'none';
+  }
+
+  players = [p1, p2, p3, p4].filter(Boolean);
+  eliminationOrder = [];
+
+  document.querySelectorAll('.ui-screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('gameOverScreen').style.display = 'none';
+
+  if(gameType === 'time' || gameType === 'combo'){
+    matchTimeLeft = timeLimitMinutes * 60 * 60;
+    document.getElementById('timerDisplay').style.display = 'block';
+  } else {
+    document.getElementById('timerDisplay').style.display = 'none';
+  }
+
+  countdownTimer = 180;
+  dramaticZoomTimer = 0;
+  slowMotionTimer = 0;
+  particles = [];
+  lightBeams = [];
+  mapHazards = [];
+  fruits = [];
+  electroTimer = 0;
+  electroPillar = -1;
+  flyingShip = null;
+  shipSpawnCD = 180;
+  woodBreakTimer = 0;
+  woodBroken = false;
+  paperErase = 0;
+  paperErasing = false;
+  iceWindDir = 1;
+  iceWindTimer = 0;
+
+  // restaura estágios mutáveis
+  STAGES[9].platforms = [
+    {x:150,y:520,w:200,h:40,solid:true,color:"#8d6e63"},
+    {x:850,y:520,w:200,h:40,solid:true,color:"#8d6e63"},
+    {x:350,y:520,w:500,h:40,solid:true,color:"#a1887f",woodMid:true},
+    {x:280,y:360,w:180,h:14,solid:false,color:"#bcaaa4"},
+    {x:740,y:360,w:180,h:14,solid:false,color:"#bcaaa4"}
+  ];
+  STAGES[10].platforms = [
+    {x:250,y:500,w:800,h:36,solid:true,color:"#2d3436",paperMain:true},
+    {x:400,y:360,w:200,h:12,solid:false,color:"#b2bec3"},
+    {x:700,y:360,w:200,h:12,solid:false,color:"#b2bec3"}
+  ];
+
+  isSuddenDeath = false;
+  suddenDeathActive = false;
+  isPaused = false;
+  flashAlpha = 0;
+  hitStopTimer = 0;
+
+  document.getElementById('pauseBtn').style.display = 'block';
+  document.getElementById('pauseOverlay').classList.remove('active');
+  document.getElementById('pauseBtn').innerText = '⏸ PAUSE';
+
+  gameRunning = true;
+  requestAnimationFrame(gameLoop);
 }
 let isSuddenDeath=false,suddenDeathActive=false;
 function showGameSet(winnerMsg){
@@ -1319,6 +1485,109 @@ html+=`<div style="margin-bottom:8px;padding:8px;border-left:4px solid ${colors[
 }
 document.getElementById('tierListContent').innerHTML=html;
 ov.style.display='block';
+}
+
+let slots = [
+  { type: 'player', fighter: 0, level: 5, cosmetic: 0 }, // 1P sempre human
+  { type: 'cpu',    fighter: 1, level: 5, cosmetic: 0 },
+  { type: 'off',    fighter: 2, level: 5, cosmetic: 0 },
+  { type: 'off',    fighter: 3, level: 5, cosmetic: 0 }
+];
+let focusedSlot = 0;
+let dragFighter = null;
+
+function buildCharGrid(){
+  const grid = document.getElementById('charGrid');
+  if(!grid) return;
+  grid.innerHTML = '';
+  FIGHTER_TYPES.forEach((f, i) => {
+    const card = document.createElement('div');
+    card.className = 'fighter-card';
+    card.innerHTML = `<h4 style="color:${f.color}">${f.name.toUpperCase()}</h4>`;
+    card.onclick = () => {
+      if(slots[focusedSlot].type === 'off') return;
+      slots[focusedSlot].fighter = i;
+      renderSlots();
+    };
+    // drag start
+    card.draggable = true;
+    card.ondragstart = (e) => {
+      dragFighter = i;
+      e.dataTransfer.setData('text/plain', i);
+    };
+    grid.appendChild(card);
+  });
+}
+
+function renderSlots(){
+  const container = document.getElementById('playerSlots');
+  if(!container) return;
+  container.innerHTML = '';
+
+  slots.forEach((s, idx) => {
+    const div = document.createElement('div');
+    div.style.cssText = 'background:#fff;border:2px solid #dfe6e9;border-radius:8px;padding:8px;min-width:140px;text-align:center;';
+    if(idx === focusedSlot) div.style.borderColor = '#e94560';
+
+    const title = idx === 0 ? '1P' : (idx === 1 ? '2P' : (idx === 2 ? '3P' : '4P'));
+    const f = FIGHTER_TYPES[s.fighter];
+
+    div.innerHTML = `
+      <div style="font-weight:800;font-size:12px;margin-bottom:4px">${title}</div>
+      <div style="width:48px;height:56px;margin:0 auto 4px;background:${f.color};border:2px solid #2d3436;border-radius:4px;cursor:grab"
+           draggable="true"
+           ondragstart="dragFighter=${s.fighter}"
+           ondragover="event.preventDefault()"
+           ondrop="dropOnSlot(${idx})"></div>
+      <div style="font-size:10px;font-weight:700;color:${f.color}">${f.name}</div>
+      <div style="margin-top:4px;display:flex;gap:4px;justify-content:center;align-items:center">
+        <button class="opt-btn" style="padding:1px 6px;font-size:10px" onclick="event.stopPropagation();cycleSlotCosmetic(${idx},-1)">◀</button>
+        <span style="font-size:9px;font-weight:700;color:#636e72">${COSMETIC_LABELS[s.cosmetic||0]||'Sem'}</span>
+        <button class="opt-btn" style="padding:1px 6px;font-size:10px" onclick="event.stopPropagation();cycleSlotCosmetic(${idx},1)">▶</button>
+      </div>
+      <div style="margin-top:6px;display:flex;gap:4px;justify-content:center">
+        <button class="opt-btn" style="padding:2px 6px;font-size:10px" onclick="setSlotType(${idx},'player')">Player</button>
+        <button class="opt-btn" style="padding:2px 6px;font-size:10px" onclick="setSlotType(${idx},'cpu')">CPU</button>
+        ${idx > 1 ? `<button class="opt-btn" style="padding:2px 6px;font-size:10px" onclick="setSlotType(${idx},'off')">Off</button>` : ''}
+      </div>
+      ${s.type === 'cpu' ? `
+        <select onchange="slots[${idx}].level=this.value==='random'?'random':parseInt(this.value);renderSlots()" style="margin-top:4px;font-size:11px;width:100%">
+          <option value="random" ${s.level==='random'?'selected':''}>Random</option>
+          ${[1,2,3,4,5,6,7,8,9].map(n=>`<option value="${n}" ${s.level==n?'selected':''}>Nível ${n}</option>`).join('')}
+        </select>
+      ` : ''}
+    `;
+    div.onclick = () => { focusedSlot = idx; renderSlots(); };
+    container.appendChild(div);
+  });
+}
+
+function setSlotType(idx, type){
+  if(idx === 0 && type !== 'player') return; // 1P sempre player
+  if(idx === 1 && type === 'off') return; // 2P nunca pode ficar off (precisa de 2 lutadores)
+  slots[idx].type = type;
+  if(type === 'off') slots[idx].fighter = 0;
+  renderSlots();
+}
+
+function cycleSlotCosmetic(idx, dir){
+  const s = slots[idx];
+  if(!s || s.type === 'off') return;
+  s.cosmetic = ((s.cosmetic || 0) + dir + 3) % 3;
+  renderSlots();
+}
+
+function dropOnSlot(idx){
+  if(dragFighter === null || slots[idx].type === 'off') return;
+  slots[idx].fighter = dragFighter;
+  dragFighter = null;
+  renderSlots();
+}
+
+// Chamada quando entra na tela de players
+function initPlayersScreen(){
+  buildCharGrid();
+  renderSlots();
 }
 
 loadConfig();
