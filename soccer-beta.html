@@ -864,7 +864,7 @@
 
 		#btnPause {
 			position: absolute;
-			top: max(48px, calc(env(safe-area-inset-top, 8px) + 42px));
+			top: max(10px, calc(env(safe-area-inset-top, 6px) + 8px));
 			right: max(10px, env(safe-area-inset-right, 10px));
 			width: 48px;
 			height: 48px;
@@ -879,7 +879,7 @@
 		}
 		@media (max-width: 900px) {
 			#btnPause {
-				top: max(56px, calc(env(safe-area-inset-top, 10px) + 52px));
+				top: max(8px, calc(env(safe-area-inset-top, 6px) + 6px));
 				right: max(12px, env(safe-area-inset-right, 12px));
 				width: 52px;
 				height: 52px;
@@ -971,6 +971,29 @@
 		}
 		.pause-box h2 { margin: 0 0 12px; color: #ffd700; }
 
+		#btnSkill {
+			position: absolute;
+			left: 42px;
+			bottom: 168px;
+			width: 56px;
+			height: 56px;
+			border-radius: 50%;
+			border: 2px solid #ffd700;
+			background: rgba(180, 80, 0, 0.92);
+			color: #ffd700;
+			font-weight: bold;
+			font-size: 18px;
+			display: none;
+			align-items: center;
+			justify-content: center;
+			pointer-events: auto;
+			z-index: 18;
+			touch-action: none;
+			box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+		}
+		#btnSkill.visible { display: flex; }
+		#btnSkill:active, #btnSkill.active { transform: scale(0.94); filter: brightness(1.15); }
+		#btnSkill.used { opacity: 0.35; border-color: #888; color: #aaa; background: #333; }
 		/* Sprint padrão: direita, à esquerda do chute (B) */
 		#btnSprint {
 			position: absolute;
@@ -1800,6 +1823,7 @@
 				<button class="mentality-btn" id="btnMentDown">▼</button>
 			</div>
 
+			<button id="btnSkill" type="button" title="Habilidade">✦</button>
 			<button id="btnSprint">SPRINT</button>
 
 			<div id="joystickZone">
@@ -1950,12 +1974,43 @@
 			return Math.floor(v).toLocaleString("pt-BR");
 		}
 
+		function isAdmin() {
+			return !!(window.__ADMIN || (typeof beta !== "undefined" && beta && beta.admin));
+		}
 		function sanitizeCoins() {
+			if (isAdmin()) {
+				beta.coins = 999999999;
+				return;
+			}
 			let v = Number(beta.coins);
 			if (!isFinite(v) || v < 0) v = 0;
 			if (v > 500000000) v = 500000000; // teto duro de economia
 			beta.coins = Math.floor(v);
 		}
+		function adminRefreshMarket() {
+			if (!isAdmin()) return "admin off";
+			refreshMarketAfterMatch();
+			try { renderSquadList(); } catch (e) {}
+			try { updateCoinUI(); } catch (e) {}
+			return "mercado atualizado (" + ((beta.market && beta.market.offers && beta.market.offers.length) || 0) + " ofertas)";
+		}
+		window.adminmode = function (pw) {
+			if (String(pw || "") !== "artur") {
+				console.warn("adminmode: senha inválida");
+				return false;
+			}
+			window.__ADMIN = true;
+			if (typeof beta !== "undefined" && beta) {
+				beta.admin = true;
+				beta.coins = 999999999;
+				try { saveBeta(); } catch (e) {}
+			}
+			try { updateCoinUI(); } catch (e) {}
+			try { renderSquadList(); } catch (e) {}
+			console.log("Admin ON — moedas infinitas. Mercado: adminRefreshMarket()");
+			return true;
+		};
+		window.adminRefreshMarket = function () { return adminRefreshMarket(); };
 		function renderAchievements() {
 			const list = document.getElementById("achList");
 			if (!list) return;
@@ -2293,6 +2348,8 @@
 			pass: false,
 			shoot: false,
 			cross: false,
+			skill: false,
+			dribble: false,
 			switchPlayer: false, // toque: mais próximo da bola
 			switchGK: false,    // segurar: goleiro
 			active: false
@@ -2476,6 +2533,16 @@
 		setupHoldButton("btnPass", "pass");
 		setupHoldButton("btnShoot", "shoot");
 		setupHoldButton("btnCross", "cross");
+		(function setupSkillButton() {
+			const btn = document.getElementById("btnSkill");
+			if (!btn) return;
+			const fire = (e) => {
+				e.preventDefault();
+				if (userPlayer) activatePlayerSkill(userPlayer);
+			};
+			btn.addEventListener("touchstart", fire, { passive: false });
+			btn.addEventListener("mousedown", fire);
+		})();
 
 		// Duplo toque em CRUZ → pulo; em PASSE → carrinho (se correndo)
 		function bindDoubleTap(btnId, onDouble) {
@@ -2870,6 +2937,30 @@
 				const speed = (6 + charged + forceExtra) * gameSpeedMult * powerMult * (0.85 + accM * 0.2);
 				ball.vx = fx * speed;
 				ball.vy = fy * speed;
+				ball.superShot = false;
+				ball.fireTrail = [];
+
+				// Super chute: (força do jogador × 5)%
+				if (!isPass) {
+					let rawF = 55;
+					if (this.rawForca != null) rawF = this.rawForca;
+					else if (this.rosterId != null && typeof beta !== "undefined" && beta && beta.roster) {
+						const rp = beta.roster.find(r => r.id === this.rosterId);
+						if (rp && rp.attrs && rp.attrs.forca != null) rawF = rp.attrs.forca;
+					}
+					// attrs 50–100 viram 5.0–10.0; se já for 1–10, usa direto
+					const f10 = rawF > 10 ? rawF / 10 : rawF;
+					const fireChance = Math.min(1, Math.max(0, f10 * 0.05));
+					if (Math.random() < fireChance) {
+						ball.superShot = true;
+						ball.vx *= 1.35;
+						ball.vy *= 1.35;
+						ball.cooldown = 22;
+						if (typeof foulMessage !== "undefined") {
+							// flash curto
+						}
+					}
+				}
 
 				// Chute com efeito: carregar + W/S ou analógico vertical
 				// Só funciona bem com força alta; senão pode falhar / sair fraco
@@ -3427,6 +3518,10 @@
 			if (p.level == null) p.level = 1;
 			if (p.xp == null) p.xp = 0;
 			if (!p.tactics) p.tactics = { attack: "default", defense: "default" };
+			if (p.role !== "gk" && p.attrs && p.attrs.drible == null) {
+				p.attrs.drible = p.attrs.dominio != null ? p.attrs.dominio : 50;
+			}
+			if (p.skill === undefined) p.skill = null;
 			// Vontade pelo clube (moral) 0–100
 			if (p.clubMorale == null) p.clubMorale = 72 + Math.floor(Math.random() * 12);
 			if (p.benchStreak == null) p.benchStreak = 0;
@@ -3519,7 +3614,20 @@
 			national: { "1": 2000000, "2": 900000, "3": 400000 },
 			world: { "1": 8000000, "2": 3500000, "3": 1500000 }
 		};
-		const FIELD_ATTRS = ["velocidade", "resistencia", "precisao", "forca", "desarme", "posicionamento", "dominio"];
+		const FIELD_ATTRS = ["velocidade", "resistencia", "precisao", "forca", "desarme", "posicionamento", "dominio", "drible"];
+		const SKILL_TYPES = ["chip", "curve", "trickdribble", "luckyslide", "highcross"];
+		const SKILL_LABEL = {
+			chip: "Cavadinha",
+			curve: "Chute com efeito",
+			trickdribble: "Drible malandro",
+			luckyslide: "Carrinho da sorte",
+			highcross: "Cruzamento alto"
+		};
+		function rollRareSkill() {
+			// Raríssimo: ~2.2%
+			if (Math.random() > 0.022) return null;
+			return SKILL_TYPES[Math.floor(Math.random() * SKILL_TYPES.length)];
+		}
 		const GK_ATTRS = ["defesa", "pulo", "recuperacao"];
 		const DIFF_ORDER = ["iniciante", "novato", "medio", "semipro", "profissional", "muitodificil"];
 		const DIFF_META = {
@@ -3609,7 +3717,29 @@
 				tierLabel: tier.label,
 				cardTier: tier.id === "evento" ? "ouro" : tier.id,
 				nat,
-				ovr: Math.round(avg)
+				ovr: Math.round(avg),
+				skill: isGk ? null : rollRareSkill()
+			};
+		}
+		function makeNeymarOffer() {
+			return {
+				uid: "m_neymar_" + Date.now().toString(36),
+				name: "Neymar Jr",
+				role: "field",
+				line: "att",
+				prefPos: "PE",
+				attrs: {
+					velocidade: 88, resistencia: 78, precisao: 86, forca: 72,
+					desarme: 52, posicionamento: 84, dominio: 92, drible: 96
+				},
+				cost: 1850000,
+				tier: "lenda",
+				tierLabel: "Lenda",
+				cardTier: "lenda",
+				nat: { id: "BR", flag: "🇧🇷", name: "Brasil", nameEn: "Brazil" },
+				ovr: 86,
+				skill: "trickdribble",
+				uniqueTag: "neymar"
 			};
 		}
 
@@ -3623,6 +3753,10 @@
 				if (usedNames.has(o.name)) continue;
 				usedNames.add(o.name);
 				list.push(o);
+			}
+			// Neymar: 50% de chance de aparecer no lote do dia
+			if (Math.random() < 0.5 && !usedNames.has("Neymar Jr")) {
+				list.unshift(makeNeymarOffer());
 			}
 			return list;
 		}
@@ -3686,7 +3820,8 @@
 				level: 1,
 				tactics: { attack: "default", defense: "default" },
 				career: { matches: 0, goals: 0, tackles: 0, assists: 0, passes: 0, shots: 0 },
-				contract: { type: "matches", remaining: 50, total: 50, template: "longo" }
+				contract: { type: "matches", remaining: 50, total: 50, template: "longo" },
+				skill: isGk ? null : (attrsOverride && attrsOverride._skill) || rollRareSkill()
 			};
 		}
 
@@ -4954,9 +5089,10 @@
 		}
 
 		let beta = loadBeta();
+		if (beta && beta.admin) window.__ADMIN = true;
 		sanitizeCoins();
 		try { ensureClubProgress(); rollClubEvents(); } catch (e) {}
-		if (Number(beta.coins) > 500000000) {
+		if (!isAdmin() && Number(beta.coins) > 500000000) {
 			beta.coins = 500000000;
 			saveBeta();
 		}
@@ -5280,7 +5416,8 @@
 			"rippele": { type: "player", label: "rippele" },
 			"sixseven": { type: "coins", amount: 1, label: "sixseven" },
 			"poopplayer": { type: "poop", label: "poopplayer" },
-			"crazygames": { type: "coins", amount: 10000, label: "crazygames" }
+			"crazygames": { type: "coins", amount: 10000, label: "crazygames" },
+			"tonozapp": { type: "coins", amount: 200000, label: "tonozapp" }
 		};
 		function openSecretCode() {
 			if (!beta.redeemedCodes) beta.redeemedCodes = {};
@@ -5326,7 +5463,7 @@
 			} else if (def.type === "player") {
 				const attrs = {
 					velocidade: 90, resistencia: 75, precisao: 80, forca: 79,
-					desarme: 80, posicionamento: 80, dominio: 82
+					desarme: 80, posicionamento: 80, dominio: 82, drible: 80
 				};
 				const p = makeRosterPlayer("Pelé", "field", "CA", attrs);
 				p.id = beta.nextId != null ? beta.nextId++ : (beta.roster.reduce((m, x) => Math.max(m, x.id), 0) + 1);
@@ -5341,7 +5478,7 @@
 			} else if (def.type === "poop") {
 				const attrs = {
 					velocidade: 1, resistencia: 1, precisao: 1, forca: 1,
-					desarme: 1, posicionamento: 1, dominio: 1
+					desarme: 1, posicionamento: 1, dominio: 1, drible: 1
 				};
 				const p = makeRosterPlayer("You wanted", "field", "VO", attrs);
 				p.id = beta.nextId != null ? beta.nextId++ : (beta.roster.reduce((m, x) => Math.max(m, x.id), 0) + 1);
@@ -5355,7 +5492,7 @@
 				FIELD_ATTRS.forEach(k => { p.attrs[k] = 1; });
 				p.attrs = {
 					velocidade: 1, resistencia: 1, precisao: 1, forca: 1,
-					desarme: 1, posicionamento: 1, dominio: 1
+					desarme: 1, posicionamento: 1, dominio: 1, drible: 1
 				};
 				beta.roster.push(p);
 				addNews("✦ Código poopplayer: You wanted (VO · tudo 1 de verdade) entrou no elenco…");
@@ -5696,7 +5833,7 @@
 		function updateCoinUI() {
 			sanitizeCoins();
 			const el = document.getElementById("coinDisplay");
-			if (el) el.textContent = formatCoins(beta.coins);
+			if (el) el.textContent = isAdmin() ? "∞" : formatCoins(beta.coins);
 			const dh = document.getElementById("dailyHint");
 			if (dh && !dh.textContent.includes("+50")) {
 				dh.textContent = canClaimDaily() ? "Recompensa diária disponível!" : "Diária já resgatada (21h).";
@@ -6004,7 +6141,7 @@
 				</div>
 				<div class="pc-info">
 					<div class="pc-name">${nat.flag} ${p.name}${isStar ? " ⭐" : ""}</div>
-					<div class="pc-meta">${pos} · ${tierLabelOf(tier)} · ${natDisplayName(nat)}${isStar ? (LANG === "en" ? " · Star" : " · Estrela") : ""}${inj}</div>
+					<div class="pc-meta">${pos} · ${tierLabelOf(tier)} · ${natDisplayName(nat)}${isStar ? (LANG === "en" ? " · Star" : " · Estrela") : ""}${inj}${p.skill ? " · ✦ " + (SKILL_LABEL[p.skill] || p.skill) : ""}</div>
 					<div class="pc-meta" style="font-size:10px;opacity:0.9">${focus}</div>
 					<div class="pc-val">${formatCoins(val)}🪙 · ${bond}</div>
 				</div>
@@ -6283,6 +6420,14 @@
 				head.style.cssText = "padding:4px 8px 8px;font-size:11px;opacity:0.85;color:#ffd700";
 				head.textContent = "Mercado vivo · " + offers.length + " · atualiza a cada partida e todo dia (21h)";
 				list.appendChild(head);
+				if (isAdmin()) {
+					const adm = document.createElement("button");
+					adm.type = "button";
+					adm.textContent = "⟳ Atualizar mercado (admin)";
+					adm.style.cssText = "margin:0 8px 8px;padding:8px 12px;background:#5c4a00;color:#ffd700;border:1px solid #ffd700;border-radius:6px;cursor:pointer;font-weight:bold";
+					adm.onclick = () => { adminRefreshMarket(); renderSquadList(); };
+					list.appendChild(adm);
+				}
 				q.type = "text";
 				q.placeholder = "Pesquisar nome, posição, tier...";
 				q.style.cssText = "width:100%;margin:0 0 8px;padding:8px;background:#111;color:#fff;border:1px solid #555;border-radius:6px;box-sizing:border-box";
@@ -6983,7 +7128,9 @@
 				nat: m.nat || randomNationality(),
 				cardTier: m.cardTier || m.tier,
 				career: { matches: 0, goals: 0, tackles: 0, assists: 0, passes: 0, shots: 0 },
-				contract: { type: "matches", remaining: 20, total: 20, template: "curto" }
+				contract: { type: "matches", remaining: 20, total: 20, template: "curto" },
+				skill: m.skill || null,
+				uniqueTag: m.uniqueTag || null
 			};
 			ensurePlayerMeta(np);
 			beta.roster.push(np);
@@ -7158,9 +7305,13 @@
 					strength: 0.70 + n(a.forca) * 0.58,
 					tackle: 0.65 + n(a.desarme) * 0.65,
 					positioning: 0.70 + n(a.posicionamento) * 0.58,
-					control: 0.70 + n(a.dominio) * 0.58
+					control: 0.70 + n(a.dominio) * 0.58,
+					dribble: 0.68 + n(a.drible != null ? a.drible : a.dominio) * 0.62
 				};
 			}
+			pl.skill = data.skill || null;
+			pl.skillUsedThisMatch = !!data.skillUsedThisMatch;
+			pl.rawForca = (data.attrs && data.attrs.forca != null) ? data.attrs.forca : 55;
 			if (inPos) {
 				Object.keys(pl.attrMult).forEach(k => { pl.attrMult[k] *= 1.06; });
 			}
@@ -7453,6 +7604,9 @@
 			gameState = "playing";
 			lastTick = Date.now();
 			try { CG.gameplayStart(); } catch (e) {}
+			if (beta && beta.roster) {
+				beta.roster.forEach(r => { r.skillUsedThisMatch = false; });
+			}
 			
 			initPositions(true);
 			// Delay inicial antes do apito / pontapé (3s)
@@ -9159,6 +9313,119 @@
 			}
 		}
 
+		function nearestOpponent(p, maxD) {
+			let best = null, bestD = maxD || 70;
+			players.forEach(o => {
+				if (!o || o.team === p.team || o.isSentOff || o.isExhausted) return;
+				const d = Math.hypot(o.x - p.x, o.y - p.y);
+				if (d < bestD) { bestD = d; best = o; }
+			});
+			return best;
+		}
+		function tryDribble(p) {
+			if (!p || ball.holder !== p || p.isSliding || p.stunTime > 0) return false;
+			if (p.dribbleCd && p.dribbleCd > 0) return false;
+			const opp = nearestOpponent(p, 58);
+			const dribM = (p.attrMult && p.attrMult.dribble) || 1;
+			p.dribbleCd = 28;
+			if (!opp) {
+				// dash curto mesmo sem marcador
+				p.x += (p.facingX || 1) * 16;
+				p.y += (p.facingY || 0) * 16;
+				return true;
+			}
+			const tkl = (opp.attrMult && opp.attrMult.tackle) || 1;
+			const chance = Math.min(0.88, 0.38 + dribM * 0.38 - tkl * 0.12);
+			if (Math.random() < chance) {
+				const fx = p.facingX || (p.team === 1 ? 1 : -1);
+				const fy = p.facingY || 0;
+				p.x += fx * 28;
+				p.y += fy * 28;
+				ball.x = p.x + fx * 12;
+				ball.y = p.y + fy * 12;
+				opp.stunTime = Math.max(opp.stunTime || 0, 36);
+				p.matchStamina = Math.max(0, p.matchStamina - 0.4);
+				return true;
+			}
+			// falhou: perde a bola
+			ball.holder = null;
+			ball.vx = (Math.random() - 0.5) * 3;
+			ball.vy = (Math.random() - 0.5) * 3;
+			ball.cooldown = 8;
+			p.stunTime = Math.max(p.stunTime || 0, 16);
+			return false;
+		}
+		function activatePlayerSkill(p) {
+			if (!p || !p.skill || p.skillUsedThisMatch) return false;
+			const kind = p.skill;
+			const needBall = kind !== "luckyslide";
+			if (needBall && ball.holder !== p) return false;
+			p.skillUsedThisMatch = true;
+			if (p.rosterId != null && beta && beta.roster) {
+				const rp = beta.roster.find(r => r.id === p.rosterId);
+				if (rp) rp.skillUsedThisMatch = true;
+			}
+			if (kind === "chip") {
+				const aim = p.isUser ? getAimVector(true) : { x: p.facingX || 1, y: p.facingY || 0 };
+				const fx = aim.x || (p.team === 1 ? 1 : -1), fy = aim.y || 0;
+				p.setFacing(fx, fy);
+				ball.holder = null;
+				ball.inAir = true;
+				ball.startX = ball.x; ball.startY = ball.y;
+				const dist = 280;
+				ball.targetX = p.x + fx * dist;
+				ball.targetY = p.y + fy * dist;
+				ball.totalDist = dist;
+				ball.progress = 0;
+				ball.speedAir = 3.6 * gameSpeedMult;
+				ball.height = 0.55;
+				ball.cooldown = 16;
+				lastTouchTeam = p.team; lastTouchPlayer = p;
+			} else if (kind === "curve") {
+				p.power = Math.max(p.power || 0, 8);
+				p.shoot(ball, 0);
+				ballCurve = (p.team === 1 ? 1 : -1) * 0.18 * gameSpeedMult;
+			} else if (kind === "trickdribble") {
+				const opp = nearestOpponent(p, 72);
+				const fx = p.facingX || (p.team === 1 ? 1 : -1);
+				const fy = p.facingY || 0;
+				p.x += fx * 36; p.y += fy * 36;
+				ball.x = p.x + fx * 14; ball.y = p.y + fy * 14;
+				if (opp) {
+					opp.stunTime = Math.max(opp.stunTime || 0, 90);
+					opp.isSliding = false;
+				}
+			} else if (kind === "luckyslide") {
+				p.isSliding = true;
+				p.slideFrames = 22;
+				p.slideDx = p.facingX || (p.team === 1 ? 1 : -1);
+				p.slideDy = p.facingY || 0;
+				p.slideHit = false;
+				p.luckySlide = true;
+				p.tackleCooldown = 10;
+			} else if (kind === "highcross") {
+				p.crossHold = 22;
+				triggerCross(p);
+				ball.speedAir = 3.2 * gameSpeedMult;
+				ball.height = 0.7;
+			}
+			updateSkillButton();
+			return true;
+		}
+		function updateSkillButton() {
+			const btn = document.getElementById("btnSkill");
+			if (!btn) return;
+			const p = userPlayer;
+			if (!p || !p.skill) {
+				btn.classList.remove("visible", "used");
+				btn.title = "Habilidade";
+				return;
+			}
+			btn.classList.add("visible");
+			btn.classList.toggle("used", !!p.skillUsedThisMatch);
+			btn.title = (SKILL_LABEL[p.skill] || p.skill) + (p.skillUsedThisMatch ? " (já usada)" : " (1x)");
+		}
+
 		function updateEnemyAI() {
 			let scoreDiffRed = scoreRed - scoreBlue; 
 			if (matchTimeLeft < 75) { 
@@ -9550,6 +9817,17 @@
 				keys["KeyI"] = false;
 				mobile.switchGK = false;
 			}
+			if (keys["KeyJ"]) {
+				if (userPlayer) activatePlayerSkill(userPlayer);
+				keys["KeyJ"] = false;
+			}
+			if (keys["KeyH"] || mobile.dribble) {
+				if (userPlayer) tryDribble(userPlayer);
+				keys["KeyH"] = false;
+				mobile.dribble = false;
+			}
+			if (userPlayer && userPlayer.dribbleCd > 0) userPlayer.dribbleCd--;
+			updateSkillButton();
 
 			if (userPlayer.isExhausted) {
 				let available = players.filter(pl => pl.team === 1 && pl.role === 'field' && !pl.isExhausted);
@@ -10041,7 +10319,7 @@
 					} else {
 						p.holdTime = 0;
 						// Goleiro IA pega bola solta sozinho (se não for o user controlando)
-						if (!p.isUser && !ball.holder && !ball.inAir && distToBall < p.radius + ball.radius + 16) {
+						if (!p.isUser && !ball.holder && !ball.inAir && !ball.superShot && distToBall < p.radius + ball.radius + 16) {
 							const failChance = difficulty === "easy" ? 0.22 : (difficulty === "hard" || difficulty === "profissional" || difficulty === "muitodificil" ? 0.08 : 0.14);
 							if (Math.random() > failChance) {
 								ball.holder = p;
@@ -10164,7 +10442,14 @@
 							let hd = Math.hypot(p.x - ball.holder.x, p.y - ball.holder.y);
 							if (hd < p.radius + ball.holder.radius + 14) {
 								p.slideHit = true;
-								if (maybeInjure(ball.holder, true)) {
+								if (p.luckySlide) {
+									p.luckySlide = false;
+									p.executeSuccessfulTackle(ball);
+									if (ball.holder !== p) {
+										ball.holder = p;
+										ball.vx = 0; ball.vy = 0;
+									}
+								} else if (maybeInjure(ball.holder, true)) {
 									// lesão rara
 								} else if (Math.random() < 0.36) {
 									callFoul(p, ball.holder, true);
@@ -10528,6 +10813,7 @@
 						const gDef = (gk.attrMult && gk.attrMult.gkDef) || 1;
 						const gJump = (gk.attrMult && gk.attrMult.gkJump) || 1;
 						let r = gk.radius + ball.radius + (gk.isGkJumping ? 22 + gJump * 10 : 8 + gDef * 6);
+						if (ball.superShot) continue;
 						if (gd < r && (gk.isGkJumping || (ball.height || 0) < 0.35)) {
 							const need = gk.isGkJumping ? Math.max(0.08, 0.28 - gJump * 0.08) : Math.max(0.25, 0.62 - gDef * 0.12);
 							if (Math.random() > need || gk.isUser) {
@@ -10648,6 +10934,10 @@
 							if (gk.gkGetUp > 0) catchRadius *= 0.55; // no chão, defende mal
 
 							if (gDist < catchRadius) {
+								if (ball.superShot) {
+									ball.cooldown = Math.max(ball.cooldown, 6);
+									continue;
+								}
 								// Goleiro controlado pelo usuário
 								if (gk.isUser) {
 									const failUser = gk.gkGetUp > 0 ? Math.random() < 0.35 : (gk.isGkJumping ? Math.random() < 0.04 : Math.random() < 0.12);
@@ -10750,6 +11040,7 @@
 
 				const fr = (weather && weather.friction) || ball.friction;
 				ball.vx *= fr; ball.vy *= fr;
+				if (ball.superShot && Math.hypot(ball.vx || 0, ball.vy || 0) < 2.2) ball.superShot = false;
 				// Vento: empurra a bola na direção RNG (força depende do clima)
 				if (weather && weatherWindForce > 0.08 && !ball.holder) {
 					const push = weatherWindForce * 0.016 * gameSpeedMult;
@@ -11363,6 +11654,7 @@
 				const h = ball.height || 0;
 				const drawR = ball.radius * (1 + h * 0.55);
 				const shadowScale = Math.max(0.35, 1 - h * 0.45);
+				const drawY = ball.y - h * 14;
 
 				// Sombra no chão
 				ctx.beginPath();
@@ -11370,8 +11662,19 @@
 				ctx.fillStyle = `rgba(0,0,0,${0.35 * shadowScale})`;
 				ctx.fill();
 
+				// Super chute: fogo
+				if (ball.superShot && !ball.holder) {
+					for (let i = 0; i < 7; i++) {
+						const ang = Math.random() * Math.PI * 2;
+						const dist = drawR + 2 + Math.random() * 10;
+						ctx.beginPath();
+						ctx.arc(ball.x + Math.cos(ang) * dist * 0.35, drawY + Math.sin(ang) * dist * 0.35 + 2, 3 + Math.random() * 4, 0, Math.PI * 2);
+						ctx.fillStyle = Math.random() < 0.45 ? "rgba(255,80,0,0.7)" : "rgba(255,200,40,0.65)";
+						ctx.fill();
+					}
+				}
+
 				// Bola (mais alta = desenhada um pouco acima)
-				const drawY = ball.y - h * 14;
 				ctx.beginPath();
 				ctx.arc(ball.x, drawY, drawR, 0, Math.PI * 2);
 				const ballGrad = ctx.createRadialGradient(ball.x - 2, drawY - 2, 1, ball.x, drawY, drawR);
