@@ -994,6 +994,27 @@
 		#btnSkill.visible { display: flex; }
 		#btnSkill:active, #btnSkill.active { transform: scale(0.94); filter: brightness(1.15); }
 		#btnSkill.used { opacity: 0.35; border-color: #888; color: #aaa; background: #333; }
+		#btnDribble {
+			position: absolute;
+			left: 104px;
+			bottom: 168px;
+			width: 56px;
+			height: 56px;
+			border-radius: 50%;
+			border: 2px solid #fff;
+			background: rgba(0, 120, 180, 0.92);
+			color: #fff;
+			font-weight: bold;
+			font-size: 12px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			pointer-events: auto;
+			z-index: 18;
+			touch-action: none;
+			box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+		}
+		#btnDribble:active, #btnDribble.active { transform: scale(0.94); }
 		/* Sprint padrão: direita, à esquerda do chute (B) */
 		#btnSprint {
 			position: absolute;
@@ -1776,6 +1797,8 @@
 				<li><b>X</b> — troca (2º se já for o mais perto) · segure = goleiro</li>
 				<li>Na cobrança, <b>X</b> também chama um companheiro</li>
 				<li><b>▲▼</b> — mentalidade (só ataca com &gt; 0)</li>
+				<li><b>DRI</b> — drible (com a bola, perto do adversário)</li>
+				<li><b>✦</b> — habilidade especial (1× por jogo, se o jogador tiver)</li>
 				<li>Pulo + chute na zona cinza = <b>cabeçada</b></li>
 				<li>Goleiro: sprint + 2x Y = <b>pulo de defesa</b></li>
 			</ul>
@@ -1783,6 +1806,7 @@
 			<ul>
 				<li><b>WASD</b> — mover · <b>Shift</b> — correr</li>
 				<li><b>Espaço / K</b> — chute · <b>P</b> — passe · <b>L</b> — cruz</li>
+				<li><b>F</b> — drible · <b>J</b> — habilidade especial</li>
 				<li><b>O</b> — troca · <b>I</b> — goleiro</li>
 				<li><b>Setas ↑↓</b> — mentalidade · <b>←→</b> — câmera na cobrança</li>
 				<li>Mouse mira falta (se ligado nas configs)</li>
@@ -1824,6 +1848,7 @@
 			</div>
 
 			<button id="btnSkill" type="button" title="Habilidade">✦</button>
+			<button id="btnDribble" type="button" title="Drible">DRI</button>
 			<button id="btnSprint">SPRINT</button>
 
 			<div id="joystickZone">
@@ -1987,7 +2012,7 @@
 			if (v > 500000000) v = 500000000; // teto duro de economia
 			beta.coins = Math.floor(v);
 		}
-		function adminRefreshMarket() {
+		function doAdminRefreshMarket() {
 			if (!isAdmin()) return "admin off";
 			refreshMarketAfterMatch();
 			try { renderSquadList(); } catch (e) {}
@@ -2010,7 +2035,7 @@
 			console.log("Admin ON — moedas infinitas. Mercado: adminRefreshMarket()");
 			return true;
 		};
-		window.adminRefreshMarket = function () { return adminRefreshMarket(); };
+		window.adminRefreshMarket = doAdminRefreshMarket;
 		function renderAchievements() {
 			const list = document.getElementById("achList");
 			if (!list) return;
@@ -2539,6 +2564,17 @@
 			const fire = (e) => {
 				e.preventDefault();
 				if (userPlayer) activatePlayerSkill(userPlayer);
+			};
+			btn.addEventListener("touchstart", fire, { passive: false });
+			btn.addEventListener("mousedown", fire);
+		})();
+		(function setupDribbleButton() {
+			const btn = document.getElementById("btnDribble");
+			if (!btn) return;
+			const fire = (e) => {
+				e.preventDefault();
+				mobile.dribble = true;
+				if (userPlayer) tryDribble(userPlayer);
 			};
 			btn.addEventListener("touchstart", fire, { passive: false });
 			btn.addEventListener("mousedown", fire);
@@ -3522,6 +3558,9 @@
 				p.attrs.drible = p.attrs.dominio != null ? p.attrs.dominio : 50;
 			}
 			if (p.skill === undefined) p.skill = null;
+			if (!Array.isArray(p.dribbles)) {
+				p.dribbles = rollAttackerDribbles(p.prefPos, p.uniqueTag === "neymar" || (p.name && p.name.indexOf("Neymar") >= 0));
+			}
 			// Vontade pelo clube (moral) 0–100
 			if (p.clubMorale == null) p.clubMorale = 72 + Math.floor(Math.random() * 12);
 			if (p.benchStreak == null) p.benchStreak = 0;
@@ -3623,6 +3662,39 @@
 			luckyslide: "Carrinho da sorte",
 			highcross: "Cruzamento alto"
 		};
+		const DRIBBLE_MOVES = {
+			chapeu: { id: "chapeu", name: "Chapéu", combo: "↓ ↑ DRI", seq: ["D", "U"], taps: 1 },
+			pedalada_falsa: { id: "pedalada_falsa", name: "Pedalada falsa", combo: "↑ ↓ DRI", seq: ["U", "D"], taps: 1 },
+			pedalada: { id: "pedalada", name: "Pedalada verdadeira", combo: "↑ ↓ DRI+DRI", seq: ["U", "D"], taps: 2 },
+			elastico: { id: "elastico", name: "Elástico", combo: "→ ← DRI", seq: ["R", "L"], taps: 1 },
+			meialua: { id: "meialua", name: "Meia-lua", combo: "← → DRI", seq: ["L", "R"], taps: 1 },
+			caneta: { id: "caneta", name: "Caneta", combo: "↑ DRI", seq: ["U"], taps: 1 },
+			cruyff: { id: "cruyff", name: "Virada de Cruyff", combo: "↓ ← DRI", seq: ["D", "L"], taps: 1 },
+			tiktak: { id: "tiktak", name: "Tik tak", combo: "DRI+DRI", seq: [], taps: 2 }
+		};
+		const ALL_DRIBBLE_IDS = Object.keys(DRIBBLE_MOVES);
+		function isAttackerPos(pos) {
+			const s = String(pos || "").toUpperCase();
+			return s === "CA" || s.startsWith("CA") || s === "PD" || s === "PE" || s === "MA";
+		}
+		function rollAttackerDribbles(prefPos, forceAll) {
+			if (forceAll) return ALL_DRIBBLE_IDS.slice();
+			if (!isAttackerPos(prefPos)) return [];
+			const pool = ALL_DRIBBLE_IDS.slice();
+			const n = 3 + Math.floor(Math.random() * 3); // 3–5
+			const out = [];
+			while (out.length < n && pool.length) {
+				const i = Math.floor(Math.random() * pool.length);
+				out.push(pool.splice(i, 1)[0]);
+			}
+			return out;
+		}
+		function dribbleName(id) {
+			return (DRIBBLE_MOVES[id] && DRIBBLE_MOVES[id].name) || id;
+		}
+		function dribbleComboTxt(id) {
+			return (DRIBBLE_MOVES[id] && DRIBBLE_MOVES[id].combo) || "";
+		}
 		function rollRareSkill() {
 			// Raríssimo: ~2.2%
 			if (Math.random() > 0.022) return null;
@@ -3739,7 +3811,8 @@
 				nat: { id: "BR", flag: "🇧🇷", name: "Brasil", nameEn: "Brazil" },
 				ovr: 86,
 				skill: "trickdribble",
-				uniqueTag: "neymar"
+				uniqueTag: "neymar",
+				dribbles: ALL_DRIBBLE_IDS.slice()
 			};
 		}
 
@@ -6719,6 +6792,7 @@
 				<div style="font-size:12px;margin:4px 0 8px;padding:6px;background:rgba(255,215,0,0.08);border-radius:6px;border:1px solid #665500">
 					${nat.flag} ${natDisplayName(nat)} · ${LANG === "en" ? "Natural" : "Natural"}: <b style="color:#ffd700">${POS_LABEL[pref] || pref}</b> · ${tierLabelOf(tier)}
 				</div>
+				${p.skill ? `<div style="font-size:13px;margin:0 0 8px;padding:8px;background:rgba(255,140,0,0.18);border:1px solid #ff9800;border-radius:6px;color:#ffd54f"><b>✦ Habilidade:</b> ${SKILL_LABEL[p.skill] || p.skill}<div style="font-size:11px;opacity:0.85;margin-top:3px">1 vez por partida · botão ✦ / tecla J</div></div>` : `<div style="font-size:11px;margin:0 0 8px;opacity:0.55">Sem habilidade especial</div>`}
 				<div style="font-size:11px;margin-bottom:6px">Nível <b>${lv}</b> · XP ${xp}/${need}
 					<div style="height:6px;background:#222;border-radius:3px;margin-top:3px"><div style="height:100%;width:${Math.min(100, xp/need*100)}%;background:#ffd700;border-radius:3px"></div></div>
 				</div>
@@ -6792,9 +6866,12 @@
 			const modal = document.getElementById("playerDetailModal");
 			if (!m || !box) return;
 			if (modal) modal.classList.add("open");
-			const fake = { name: m.name, role: m.role, prefPos: m.prefPos, attrs: m.attrs, cardTier: m.cardTier || m.tier, nat: m.nat };
+			const fake = { name: m.name, role: m.role, prefPos: m.prefPos, attrs: m.attrs, cardTier: m.cardTier || m.tier, nat: m.nat, skill: m.skill };
 			const keys = m.role === "gk" ? GK_ATTRS : FIELD_ATTRS;
 			let html = buildPlayerCardHTML(fake, { cost: m.cost, uid: m.uid });
+			html += m.skill
+				? `<div style="font-size:13px;margin:8px 0;padding:8px;background:rgba(255,140,0,0.18);border:1px solid #ff9800;border-radius:6px;color:#ffd54f"><b>✦ Habilidade:</b> ${SKILL_LABEL[m.skill] || m.skill}</div>`
+				: `<div style="font-size:11px;margin:8px 0;opacity:0.55">Sem habilidade especial</div>`;
 			html += `<div style="font-size:12px;margin:8px 0;opacity:0.9">Atributos:</div><div class="attr-grid">`;
 			keys.forEach(k => {
 				html += `<span>${k}</span><span><b>${m.attrs[k]}</b></span><span></span>`;
@@ -7130,7 +7207,8 @@
 				career: { matches: 0, goals: 0, tackles: 0, assists: 0, passes: 0, shots: 0 },
 				contract: { type: "matches", remaining: 20, total: 20, template: "curto" },
 				skill: m.skill || null,
-				uniqueTag: m.uniqueTag || null
+				uniqueTag: m.uniqueTag || null,
+				dribbles: Array.isArray(m.dribbles) ? m.dribbles.slice() : rollAttackerDribbles(prefPos, m.uniqueTag === "neymar")
 			};
 			ensurePlayerMeta(np);
 			beta.roster.push(np);
@@ -7312,6 +7390,7 @@
 			pl.skill = data.skill || null;
 			pl.skillUsedThisMatch = !!data.skillUsedThisMatch;
 			pl.rawForca = (data.attrs && data.attrs.forca != null) ? data.attrs.forca : 55;
+			pl.dribbles = Array.isArray(data.dribbles) ? data.dribbles.slice() : [];
 			if (inPos) {
 				Object.keys(pl.attrMult).forEach(k => { pl.attrMult[k] *= 1.06; });
 			}
@@ -9314,7 +9393,7 @@
 		}
 
 		function nearestOpponent(p, maxD) {
-			let best = null, bestD = maxD || 70;
+			let best = null, bestD = maxD || 80;
 			players.forEach(o => {
 				if (!o || o.team === p.team || o.isSentOff || o.isExhausted) return;
 				const d = Math.hypot(o.x - p.x, o.y - p.y);
@@ -9325,7 +9404,7 @@
 		function tryDribble(p) {
 			if (!p || ball.holder !== p || p.isSliding || p.stunTime > 0) return false;
 			if (p.dribbleCd && p.dribbleCd > 0) return false;
-			const opp = nearestOpponent(p, 58);
+			const opp = nearestOpponent(p, 70);
 			const dribM = (p.attrMult && p.attrMult.dribble) || 1;
 			p.dribbleCd = 28;
 			if (!opp) {
@@ -9821,8 +9900,9 @@
 				if (userPlayer) activatePlayerSkill(userPlayer);
 				keys["KeyJ"] = false;
 			}
-			if (keys["KeyH"] || mobile.dribble) {
+			if (keys["KeyF"] || keys["KeyH"] || mobile.dribble) {
 				if (userPlayer) tryDribble(userPlayer);
+				keys["KeyF"] = false;
 				keys["KeyH"] = false;
 				mobile.dribble = false;
 			}
