@@ -11,8 +11,7 @@
 	<link rel="apple-touch-icon" href="imgA.png">
 	<link rel="icon" type="image/png" sizes="192x192" href="img.png">
 	<title>School Soccer</title>
-	<!-- CrazyGames HTML5 SDK v3 -->
-	<script src="https://sdk.crazygames.com/crazygames-sdk-v3.js"></script>
+	<!-- CrazyGames removido -->
 	<style>
 		* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 		html, body {
@@ -140,13 +139,16 @@
 		#menuOverlay {
 			position: absolute;
 			top: 0; left: 0; width: 100%; height: 100%;
-			background: #0a0c12;
+			background:
+				radial-gradient(1200px 500px at 10% -10%, rgba(201,162,39,0.18), transparent 50%),
+				radial-gradient(900px 400px at 100% 0%, rgba(20,80,160,0.25), transparent 45%),
+				linear-gradient(180deg, #071018 0%, #0b1a2c 45%, #061018 100%);
 			display: flex;
 			flex-direction: column;
-			align-items: center;
-			justify-content: center;
+			align-items: stretch;
+			justify-content: stretch;
 			z-index: 20;
-			padding: 10px;
+			padding: 0;
 		}
 		#menuOverlay.menu-fade-in {
 			animation: menuFadeIn 0.35s ease-out;
@@ -163,18 +165,90 @@
 			to { opacity: 1; transform: translateY(0); }
 		}
 		.menu-box {
-			background: #1e222a;
-			padding: 14px 14px 16px;
-			border-radius: 12px;
-			border: 2px solid #444;
-			text-align: center;
+			background: transparent;
+			padding: 0;
+			border-radius: 0;
+			border: none;
+			text-align: left;
 			width: 100%;
-			max-width: 400px;
-			max-height: 90vh;
-			overflow-y: auto;
-			box-shadow: 0 12px 40px rgba(0,0,0,0.65);
+			max-width: none;
+			max-height: 100%;
+			height: 100%;
+			overflow: hidden;
+			box-shadow: none;
+			display: flex;
+			flex-direction: column;
 		}
-		.menu-box h2 { margin-top: 0; color: #ffd700; font-size: 18px; }
+		.menu-box h2 { margin: 0; color: #e8c547; font-size: 18px; letter-spacing: 1px; }
+		.hub-top {
+			display: flex; align-items: center; gap: 10px;
+			padding: 10px 14px;
+			background: linear-gradient(90deg, rgba(0,0,0,0.55), rgba(12,28,48,0.4));
+			border-bottom: 1px solid rgba(232,197,71,0.35);
+			flex-shrink: 0;
+		}
+		.hub-back {
+			background: #122033; color: #e8c547; border: 1px solid #e8c547;
+			border-radius: 4px; padding: 8px 12px; font-weight: bold; cursor: pointer;
+			min-width: 44px;
+		}
+		.hub-crumb { flex: 1; color: #cfe3ff; font-size: 13px; letter-spacing: 0.4px; }
+		.hub-crumb b { color: #e8c547; }
+		.hub-coins { color: #e8c547; font-weight: bold; font-size: 14px; white-space: nowrap; }
+		.hub-body { flex: 1; overflow-y: auto; padding: 12px 14px 18px; }
+		.hub-screen { display: none; animation: sectionSlide 0.25s ease-out; }
+		.hub-screen.on { display: block; }
+		.hub-grid {
+			display: grid;
+			grid-template-columns: 1fr;
+			gap: 10px;
+		}
+		@media (min-width: 720px) {
+			.hub-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+			.hub-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+		}
+		.hub-tile {
+			position: relative;
+			border: 1px solid rgba(180,200,230,0.22);
+			border-radius: 6px;
+			padding: 18px 16px 16px;
+			cursor: pointer;
+			overflow: hidden;
+			min-height: 88px;
+			background:
+				linear-gradient(135deg, rgba(255,255,255,0.06), transparent 40%),
+				linear-gradient(180deg, #123049 0%, #0b1c2c 100%);
+			box-shadow: 0 8px 18px rgba(0,0,0,0.35);
+		}
+		.hub-tile:hover, .hub-tile:focus {
+			border-color: #e8c547;
+			transform: translateY(-1px);
+			outline: none;
+		}
+		.hub-tile.gold {
+			background: linear-gradient(180deg, #3a2e12 0%, #1a1408 100%);
+			border-color: rgba(232,197,71,0.55);
+		}
+		.hub-tile.blue {
+			background: linear-gradient(180deg, #163a5c 0%, #0b2238 100%);
+		}
+		.hub-tile.green {
+			background: linear-gradient(180deg, #143a2a 0%, #0b2218 100%);
+		}
+		.hub-tile .ht-kicker {
+			font-size: 10px; letter-spacing: 1.6px; text-transform: uppercase; color: #9bb8d4;
+		}
+		.hub-tile b { display: block; color: #fff; font-size: 18px; margin: 4px 0 4px; }
+		.hub-tile p { margin: 0; font-size: 12px; color: #c5d4e6; }
+		.hub-home-hero {
+			display: flex; align-items: center; justify-content: space-between; gap: 12px;
+			margin-bottom: 14px; padding: 16px;
+			border: 1px solid rgba(232,197,71,0.35);
+			background: linear-gradient(90deg, #1a1408, #0d1a28 55%, #0a2238);
+			border-radius: 6px;
+		}
+		.hub-home-hero h3 { margin: 0 0 4px; color: #e8c547; font-size: 20px; }
+		.hub-home-hero span { color: #cfe3ff; font-size: 12px; }
 		.menu-nav {
 			display: flex; gap: 6px; margin-bottom: 10px;
 			align-items: center; justify-content: center; flex-wrap: wrap;
@@ -874,10 +948,19 @@
 			border-radius: 50%;
 			background: rgba(0, 191, 255, 0.85);
 			border: 2px solid #fff;
-			left: 32px;
-			top: 32px;
+			left: 42px;
+			top: 42px;
 			box-shadow: 0 2px 8px rgba(0,0,0,0.4);
 			transition: none;
+		}
+		#joystickKnob.has-skill {
+			background: rgba(255, 122, 24, 0.95);
+			border-color: #ffd7a8;
+			box-shadow: 0 0 12px rgba(255,140,0,0.75);
+		}
+		#joystickBase.has-skill {
+			border-color: rgba(255,140,0,0.9);
+			background: rgba(255,120,20,0.16);
 		}
 
 		#btnPause {
@@ -1575,31 +1658,78 @@
 		
 		<div id="menuOverlay">
 			<div class="menu-box">
-				<h2 id="menuTitle">School Soccer</h2>
-				<div id="matchStatsBox" style="display:none"></div>
-
-				<div class="menu-nav" id="mainMenuNav">
-					<button type="button" class="on" id="navSecGame" onclick="setMenuSection('game')" data-i18n="navGame">⚽ Jogo</button>
-					<button type="button" id="navSecSquad" onclick="setMenuSection('squad')" data-i18n="navSquad">👥 Elenco</button>
-					<button type="button" id="navSecSettings" onclick="setMenuSection('settings')" data-i18n="navSettings">⚙ Config</button>
-					<div class="nav-hint" data-i18n="navHint">PC: <b>Q</b> / <b>E</b> troca seção</div>
+				<div class="hub-top">
+					<button type="button" class="hub-back" id="hubBackBtn" onclick="hubBack()">◀</button>
+					<div class="hub-crumb" id="hubCrumb"><b>SCHOOL SOCCER</b></div>
+					<div class="hub-coins">🪙 <span id="hubCoinDisplay">0</span></div>
+				</div>
+				<div id="matchStatsBox" style="display:none;padding:8px 14px"></div>
+				<div class="hub-body">
+				<h2 id="menuTitle" style="display:none">School Soccer</h2>
+				<div class="menu-nav" id="mainMenuNav" style="display:none">
+					<button type="button" class="on" id="navSecGame" onclick="setMenuSection('game')">⚽</button>
+					<button type="button" id="navSecSquad" onclick="setMenuSection('squad')">👥</button>
+					<button type="button" id="navSecSettings" onclick="setMenuSection('settings')">⚙</button>
 				</div>
 
-				<!-- ===== SEÇÃO JOGO ===== -->
-				<div class="menu-section on" id="secGame">
-					<h3 data-i18n="matchMode">Modo de partida</h3>
-					<div class="play-mode-card selected" id="modeFriendly" onclick="selectPlayMode('friendly')">
-						<b data-i18n="friendlyTitle">🎮 Amistoso</b>
-						<p data-i18n="friendlyDesc">Escolha a dificuldade e jogue livre.</p>
+				<!-- HUB HOME -->
+				<div class="hub-screen on" id="hubHome">
+					<div class="hub-home-hero">
+						<div>
+							<h3 id="hubClubTitle">School Soccer</h3>
+							<span id="hubClubMeta">Clube · OVR — · Rating —</span>
+						</div>
+						<button type="button" class="btn-sec gold" onclick="claimDailyReward()">🎁 Diária</button>
 					</div>
-					<div class="play-mode-card" id="modeLeague" onclick="selectPlayMode('league')">
-						<b data-i18n="leagueTitle">🏆 Liga / Torneio</b>
-						<p data-i18n="leagueDesc">Partidas da carreira (região, nacional…).</p>
+					<div class="hub-grid cols-3">
+						<div class="hub-tile gold" onclick="hubGo('play')">
+							<div class="ht-kicker">Match</div>
+							<b>Jogar</b>
+							<p>Torneio, amistoso, eventos e online.</p>
+						</div>
+						<div class="hub-tile blue" onclick="hubGo('squad')">
+							<div class="ht-kicker">Club</div>
+							<b>Elenco</b>
+							<p>Time, mercado, troféus e loja.</p>
+						</div>
+						<div class="hub-tile" onclick="hubGo('settings')">
+							<div class="ht-kicker">System</div>
+							<b>Configurações</b>
+							<p>Controles, gráficos e regras.</p>
+						</div>
 					</div>
-					<div class="play-mode-card" id="modeOnline" onclick="selectPlayMode('online')">
-						<b>🌐 Jogar online</b>
-						<p>Salas, rating (Elo) e apostas em moedas. Sem chat. Sem pausa.</p>
+				</div>
+
+				<!-- HUB PLAY -->
+				<div class="hub-screen" id="hubPlay">
+					<div class="hub-grid cols-2">
+						<div class="hub-tile gold" onclick="hubGo('tourney');selectPlayMode('league')">
+							<div class="ht-kicker">Competition</div>
+							<b>Torneio IA</b>
+							<p>Escolha o torneio e entre em campo.</p>
+						</div>
+						<div class="hub-tile blue" onclick="hubGo('friendly');selectPlayMode('friendly')">
+							<div class="ht-kicker">Exhibition</div>
+							<b>Amistoso IA</b>
+							<p>Escolha a dificuldade e jogue livre.</p>
+						</div>
+						<div class="hub-tile green" onclick="hubGo('events')">
+							<div class="ht-kicker">Limited</div>
+							<b>Eventos</b>
+							<p>Desafios e recompensas da temporada.</p>
+						</div>
+						<div class="hub-tile" onclick="hubGo('online');selectPlayMode('online')">
+							<div class="ht-kicker">Network</div>
+							<b>Online</b>
+							<p>Pesquisar sala ou partida aleatória.</p>
+						</div>
 					</div>
+				</div>
+
+				<div class="menu-section" id="secGame" style="display:none"></div>
+
+				<div class="hub-screen" id="hubFriendly">
+					<h3>Amistoso IA</h3>
 
 					<div id="friendlyOpts">
 						<div class="menu-row" id="rowDifficulty">
@@ -1608,7 +1738,51 @@
 						</div>
 						<p class="menu-hint" id="diffHint" data-i18n="diffHint">Vença para liberar o próximo nível.</p>
 					</div>
-					<div id="onlineOpts" style="display:none;text-align:left;margin:8px 0">
+					<div class="menu-row">
+						<label data-i18n="duration">Duração:</label>
+						<select id="selTime">
+							<option value="60">1 Minuto</option>
+							<option value="120">2 Minutos</option>
+							<option value="180" selected>3 Minutos</option>
+							<option value="300">5 Minutos</option>
+							<option value="600">10 Minutos</option>
+							<option value="1200">20 Minutos</option>
+						</select>
+					</div>
+					<button class="btn-start" id="btnStartMain" onclick="startGame()">Entrar em campo</button>
+					<div id="dailyHint" class="menu-hint"></div>
+					<div id="betaPanel"></div>
+				</div>
+
+				<div class="hub-screen" id="hubTourney">
+					<h3>Torneio IA</h3>
+					<div id="leagueOpts">
+						<p class="menu-hint" id="careerMatchHint" style="color:#e8c547"></p>
+						<div id="careerBox" style="margin:8px 0;padding:10px;border:1px solid #e8c547;border-radius:6px;background:rgba(20,16,6,0.45);text-align:left;font-size:13px;max-height:42vh;overflow-y:auto"></div>
+					</div>
+				</div>
+
+				<div class="hub-screen" id="hubEvents">
+					<h3>Eventos</h3>
+					<p class="menu-hint">Recompensas e desafios da temporada.</p>
+					<button type="button" class="btn-sec gold" onclick="openEventHall()">Abrir eventos</button>
+				</div>
+
+				<div class="hub-screen" id="hubOnline">
+					<h3>Online</h3>
+					<div class="hub-grid cols-2" style="margin-bottom:10px">
+						<div class="hub-tile blue" onclick="onlineConnect();onlineRefreshRooms()">
+							<div class="ht-kicker">Lobby</div>
+							<b>Pesquisar sala</b>
+							<p>Ver salas abertas e entrar.</p>
+						</div>
+						<div class="hub-tile gold" onclick="onlineQuickMatch()">
+							<div class="ht-kicker">Quick</div>
+							<b>Aleatório</b>
+							<p>Entra na primeira sala ou cria uma.</p>
+						</div>
+					</div>
+					<div id="onlineOpts" style="text-align:left;margin:8px 0">
 						<div id="onlineMeBox" style="padding:10px;border:1px solid #4fc3f7;border-radius:8px;background:rgba(0,40,80,0.4);font-size:13px;margin-bottom:8px"></div>
 						<div class="menu-row">
 							<label>Servidor</label>
@@ -1636,54 +1810,82 @@
 						<div id="onlineRoomList" style="margin-top:8px;max-height:28vh;overflow:auto;font-size:12px"></div>
 						<div id="onlineLobbyWait" style="display:none;margin-top:8px;padding:8px;border:1px solid #ffd700;border-radius:8px"></div>
 					</div>
-					<div id="leagueOpts" style="display:none">
-						<p class="menu-hint" id="careerMatchHint" style="color:#ffd700"></p>
-						<div id="careerBox" style="margin:8px 0;padding:10px;border:1px solid #4fc3f7;border-radius:8px;background:rgba(0,40,80,0.35);text-align:left;font-size:13px;max-height:32vh;overflow-y:auto"></div>
-					</div>
-
-					<div class="menu-row">
-						<label data-i18n="duration">Duração:</label>
-						<select id="selTime">
-							<option value="60" data-i18n="min1">1 Minuto</option>
-							<option value="120" data-i18n="min2">2 Minutos</option>
-							<option value="180" selected data-i18n="min3">3 Minutos</option>
-							<option value="300" data-i18n="min5">5 Minutos</option>
-							<option value="600" data-i18n="min10">10 Minutos</option>
-							<option value="1200" data-i18n="min20">20 Minutos</option>
-						</select>
-					</div>
-					<p class="menu-hint" data-i18n="longMatchHint">Partidas mais longas dão mais moedas.</p>
-
-					<button class="btn-start" id="btnStartMain" onclick="startGame()" data-i18n="startGame">Começar Jogo</button>
-					<div class="btn-row" style="margin-top:8px">
-						<button type="button" class="btn-sec gold" onclick="claimDailyReward()" data-i18n="dailyReward">🎁 Diária (21h)</button>
-						<button type="button" class="btn-sec" onclick="sellAccount()">💸 Vender conta</button>
-					</div>
-					<div id="dailyHint" class="menu-hint"></div>
-					<div id="betaPanel"></div>
 				</div>
 
-				<!-- ===== SEÇÃO ELENCO ===== -->
-				<div class="menu-section" id="secSquad">
-					<h3>Clube</h3>
-					<div class="btn-row">
-						<button type="button" class="btn-sec" onclick="openSquadMenu()">👥 Elenco / Formação</button>
-						<button type="button" class="btn-sec" onclick="openSquadMenu();setTimeout(()=>setSquadTab('contract'),50)">🛒 Mercado</button>
+				<div class="hub-screen" id="hubSquad">
+					<div class="hub-grid cols-2">
+						<div class="hub-tile gold" onclick="hubGo('myteam')">
+							<div class="ht-kicker">My Club</div>
+							<b>Meu time</b>
+							<p>Formação e jogadores do elenco.</p>
+						</div>
+						<div class="hub-tile blue" onclick="hubGo('market')">
+							<div class="ht-kicker">Transfer</div>
+							<b>Mercado</b>
+							<p>Todos à venda. Sem repetidos.</p>
+						</div>
+						<div class="hub-tile gold" onclick="hubGo('packs')">
+							<div class="ht-kicker">Packs</div>
+							<b>Meus pacotes</b>
+							<p>Abra as figurinhas aqui.</p>
+						</div>
+						<div class="hub-tile" onclick="hubGo('trophies')">
+							<div class="ht-kicker">Museum</div>
+							<b>Troféus</b>
+							<p>Sala de taças e brasões.</p>
+						</div>
+						<div class="hub-tile green" onclick="hubGo('shop')">
+							<div class="ht-kicker">Store</div>
+							<b>Mercadinho</b>
+							<p>Itens, renovadores e diária.</p>
+						</div>
 					</div>
-					<div class="btn-row">
-						<button type="button" class="btn-sec" onclick="openTrophyHall()">🏆 Sala de Troféus</button>
-						<button type="button" class="btn-sec" onclick="openEventHall()">🎯 Eventos</button>
+				</div>
+
+				<div class="hub-screen" id="hubMyTeam">
+					<h3>Meu time</h3>
+					<div class="hub-grid cols-2">
+						<div class="hub-tile blue" onclick="openSquadMenu()">
+							<div class="ht-kicker">Tactics</div>
+							<b>Formação</b>
+							<p>Edite o XI e a formação.</p>
+						</div>
+						<div class="hub-tile" onclick="openSquadMenu()">
+							<div class="ht-kicker">Roster</div>
+							<b>Jogadores</b>
+							<p>Quem você tem no clube.</p>
+						</div>
 					</div>
-					<div class="btn-row">
-						<button type="button" class="btn-sec" onclick="openSquadMenu();setTimeout(()=>setSquadTab('progress'),50)">📊 Progresso</button>
-						<button type="button" class="btn-sec" onclick="openNewsHall()">📰 Notícias</button>
-					</div>
-					<p class="menu-hint">Formação e mercado no elenco · troféus, eventos e notícias em salas próprias.</p>
+				</div>
+
+				<div class="hub-screen" id="hubMarket">
+					<h3>Mercado</h3>
+					<p class="menu-hint">Catálogo fixo. Se já tem o jogador, ele some da lista.</p>
+					<div id="hubMarketList"></div>
+				</div>
+				<div class="hub-screen" id="hubPacks">
+					<h3>Meus pacotes</h3>
+					<p class="menu-hint">Toque no pacote para abrir a figurinha.</p>
+					<div id="hubPacksList"></div>
+				</div>
+
+				<div class="hub-screen" id="hubTrophies">
+					<h3>Troféus</h3>
+					<button type="button" class="btn-sec gold" onclick="openTrophyHall()">Abrir sala de troféus</button>
 					<div id="menuTrophyPreview" class="trophy-room" style="margin-top:10px"></div>
 				</div>
 
-				<!-- ===== SEÇÃO CONFIG ===== -->
-				<div class="menu-section" id="secSettings">
+				<div class="hub-screen" id="hubShop">
+					<h3>Mercadinho</h3>
+					<div id="shopBox"></div>
+					<button type="button" class="btn-sec gold" onclick="claimDailyReward()">🎁 Recompensa diária</button>
+					<button type="button" class="btn-sec" onclick="sellAccount()" style="margin-top:8px">💸 Vender conta</button>
+				</div>
+
+				<div class="menu-section" id="secSquad" style="display:none"></div>
+
+				<div class="hub-screen" id="hubSettings">
+				<div class="menu-section on" id="secSettings" style="display:block">
 					<details class="settings-panel" id="settingsPanel" open>
 						<summary data-i18n="settingsTitle">⚙ Configurações</summary>
 						<div class="menu-row" style="margin-top:8px">
@@ -1786,6 +1988,8 @@
 						</details>
 					</details>
 				</div>
+				</div>
+				</div>
 			</div>
 		</div>
 
@@ -1811,9 +2015,6 @@
 						<button type="button" class="on" id="tabAll" onclick="setSquadTab('all')">Time</button>
 						<button type="button" id="tabXi" onclick="setSquadTab('xi')">Titulares</button>
 						<button type="button" id="tabBench" onclick="setSquadTab('bench')">Reservas</button>
-						<button type="button" id="tabContract" onclick="setSquadTab('contract')">Mercado</button>
-						<button type="button" id="tabDeals" onclick="setSquadTab('deals')">Negócios</button>
-						<button type="button" id="tabProgress" onclick="setSquadTab('progress')">Progresso</button>
 					</div>
 					<div id="squadFilters" style="display:flex;flex-wrap:wrap;gap:6px;padding:6px 4px;font-size:11px">
 						<select id="sqFilterPos" onchange="renderSquadList()" style="flex:1;min-width:90px;padding:6px;background:#111;color:#fff;border:1px solid #444;border-radius:6px">
@@ -2453,7 +2654,8 @@
 		const joyKnob = document.getElementById("joystickKnob");
 		const joyBase = document.getElementById("joystickBase");
 		let joyTouchId = null;
-		const JOY_MAX = 42; // raio máximo do knob
+		const JOY_MAX = 42;
+		const JOY_REST = 42; // centro da base 70px - knob 56/2 = 42
 
 		let joyTouchStartTime = 0;
 		let joyTouchStartNearCenter = false;
@@ -2477,8 +2679,8 @@
 				dx = (dx / dist) * JOY_MAX;
 				dy = (dy / dist) * JOY_MAX;
 			}
-			joyKnob.style.left = (32 + dx) + "px";
-			joyKnob.style.top = (32 + dy) + "px";
+			joyKnob.style.left = (JOY_REST + dx) + "px";
+			joyKnob.style.top = (JOY_REST + dy) + "px";
 			
 			mobile.dx = dist > 8 ? (dx / JOY_MAX) : 0;
 			mobile.dy = dist > 8 ? (dy / JOY_MAX) : 0;
@@ -2508,8 +2710,8 @@
 		}
 
 		function resetJoystick() {
-			joyKnob.style.left = "32px";
-			joyKnob.style.top = "32px";
+			joyKnob.style.left = JOY_REST + "px";
+			joyKnob.style.top = JOY_REST + "px";
 			mobile.dx = 0;
 			mobile.dy = 0;
 			joyTouchId = null;
@@ -3209,97 +3411,18 @@
 		let aiCrossChance = 0.07;
 		let aiSlideChance = 0.04;
 
-		// ========== CrazyGames SDK ==========
+		// CrazyGames removido
 		const CG = {
 			ready: false,
 			env: "disabled",
-			_initPromise: null,
-			async _waitForSdk(timeoutMs) {
-				const t0 = Date.now();
-				while (Date.now() - t0 < (timeoutMs || 4000)) {
-					if (window.CrazyGames && window.CrazyGames.SDK && typeof window.CrazyGames.SDK.init === "function") {
-						return true;
-					}
-					await new Promise(r => setTimeout(r, 50));
-				}
-				return !!(window.CrazyGames && window.CrazyGames.SDK);
-			},
-			async init() {
-				if (this.ready) return true;
-				if (this._initPromise) return this._initPromise;
-				this._initPromise = (async () => {
-					try {
-						const ok = await this._waitForSdk(4000);
-						if (!ok || !window.CrazyGames || !window.CrazyGames.SDK) {
-							this.env = "disabled";
-							this.ready = false;
-							return false;
-						}
-						await window.CrazyGames.SDK.init();
-						this.ready = true;
-						try {
-							this.env = window.CrazyGames.SDK.environment || "crazygames";
-						} catch (e) {
-							this.env = "crazygames";
-						}
-						console.log("[CG] SDK ready · env:", this.env);
-						return true;
-					} catch (e) {
-						console.warn("[CG] init failed", e);
-						this.ready = false;
-						this.env = "disabled";
-						return false;
-					}
-				})();
-				return this._initPromise;
-			},
-			_game() {
-				if (!this.ready) return null;
-				try { return window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.game; } catch (e) { return null; }
-			},
-			_ad() {
-				if (!this.ready) return null;
-				try { return window.CrazyGames && window.CrazyGames.SDK && window.CrazyGames.SDK.ad; } catch (e) { return null; }
-			},
-			loadingStart() {
-				if (!this.ready) return;
-				try { const g = this._game(); if (g && typeof g.loadingStart === "function") g.loadingStart(); } catch (e) {}
-			},
-			loadingStop() {
-				if (!this.ready) return;
-				try { const g = this._game(); if (g && typeof g.loadingStop === "function") g.loadingStop(); } catch (e) {}
-			},
-			gameplayStart() {
-				if (!this.ready) return;
-				try { const g = this._game(); if (g && typeof g.gameplayStart === "function") g.gameplayStart(); } catch (e) {}
-			},
-			gameplayStop() {
-				if (!this.ready) return;
-				try { const g = this._game(); if (g && typeof g.gameplayStop === "function") g.gameplayStop(); } catch (e) {}
-			},
-			happytime() {
-				if (!this.ready) return;
-				try { const g = this._game(); if (g && typeof g.happytime === "function") g.happytime(); } catch (e) {}
-			},
-			/** Midgame ad (after match). Safe no-op if unavailable. */
-			requestMidgameAd() {
-				return new Promise((resolve) => {
-					if (!this.ready) { resolve(false); return; }
-					const ad = this._ad();
-					if (!ad || typeof ad.requestAd !== "function") { resolve(false); return; }
-					try {
-						ad.requestAd("midgame", {
-							adStarted: () => { try { this.gameplayStop(); } catch (e) {} },
-							adFinished: () => { resolve(true); },
-							adError: () => { resolve(false); }
-						});
-					} catch (e) {
-						resolve(false);
-					}
-				});
-			}
+			async init() { return false; },
+			loadingStart() {},
+			loadingStop() {},
+			gameplayStart() {},
+			gameplayStop() {},
+			happytime() {},
+			requestMidgameAd() { return Promise.resolve(false); }
 		};
-
 		// ========== PROGRESSÃO BETA (moedas, elenco, dificuldades) ==========
 		const BETA_KEY = "soccerBetaProg_v6";
 		const GAME_NAME = "School Soccer";
@@ -3869,27 +3992,64 @@
 				skill: isGk ? null : rollRareSkill()
 			};
 		}
-		function makeNeymarOffer() {
+		function makeStarOffer(def) {
 			return {
-				uid: "m_neymar_" + Date.now().toString(36),
-				name: "Neymar Jr",
+				uid: "m_star_" + def.tag + "_" + Date.now().toString(36),
+				name: def.name,
 				role: "field",
-				line: "att",
-				prefPos: "PE",
-				attrs: {
-					velocidade: 88, resistencia: 78, precisao: 86, forca: 72,
-					desarme: 52, posicionamento: 84, dominio: 92, drible: 96
-				},
-				cost: 1850000,
-				tier: "lenda",
-				tierLabel: "Lenda",
-				cardTier: "lenda",
-				nat: { id: "BR", flag: "🇧🇷", name: "Brasil", nameEn: "Brazil" },
-				ovr: 86,
-				skill: "trickdribble",
-				uniqueTag: "neymar",
-				dribbles: ALL_DRIBBLE_IDS.slice()
+				line: def.line || "att",
+				prefPos: def.pos,
+				attrs: def.attrs,
+				cost: def.cost,
+				tier: def.tier,
+				tierLabel: def.tier === "lenda" ? "Lenda" : (def.tier === "especial" ? "Especial" : "Ouro"),
+				cardTier: def.tier,
+				nat: def.nat,
+				ovr: def.ovr,
+				skill: def.skill || null,
+				uniqueTag: def.tag,
+				dribbles: def.dribbles || rollAttackerDribbles(def.pos, true)
 			};
+		}
+		function makeNeymarOffer() {
+			return makeStarOffer({
+				tag: "neymar", name: "Neymar Jr", pos: "PE", line: "att", tier: "lenda", ovr: 86, cost: 1850000,
+				skill: "trickdribble",
+				nat: { id: "BR", flag: "🇧🇷", name: "Brasil", nameEn: "Brazil" },
+				attrs: { velocidade: 88, resistencia: 78, precisao: 86, forca: 72, desarme: 52, posicionamento: 84, dominio: 92, drible: 96 }
+			});
+		}
+		function starMarketPlayers() {
+			return [
+				makeNeymarOffer(),
+				makeStarOffer({
+					tag: "cr7", name: "Cristiano Ronaldo", pos: "CA", line: "att", tier: "lenda", ovr: 90, cost: 2400000,
+					nat: { id: "PT", flag: "🇵🇹", name: "Portugal", nameEn: "Portugal" },
+					attrs: { velocidade: 87, resistencia: 88, precisao: 90, forca: 86, desarme: 48, posicionamento: 92, dominio: 86, drible: 84 }
+				}),
+				makeStarOffer({
+					tag: "messi", name: "Lionel Messi", pos: "MD", line: "att", tier: "lenda", ovr: 91, cost: 2500000,
+					skill: "curve",
+					nat: { id: "AR", flag: "🇦🇷", name: "Argentina", nameEn: "Argentina" },
+					attrs: { velocidade: 82, resistencia: 80, precisao: 95, forca: 68, desarme: 45, posicionamento: 94, dominio: 96, drible: 97 }
+				}),
+				makeStarOffer({
+					tag: "kdb", name: "Kevin De Bruyne", pos: "MO", line: "mid", tier: "lenda", ovr: 88, cost: 1950000,
+					nat: { id: "BE", flag: "🇧🇪", name: "Bélgica", nameEn: "Belgium" },
+					attrs: { velocidade: 74, resistencia: 82, precisao: 94, forca: 76, desarme: 62, posicionamento: 90, dominio: 88, drible: 80 }
+				}),
+				makeStarOffer({
+					tag: "yamal", name: "Lamine Yamal", pos: "PD", line: "att", tier: "especial", ovr: 84, cost: 1600000,
+					skill: "trickdribble",
+					nat: { id: "ES", flag: "🇪🇸", name: "Espanha", nameEn: "Spain" },
+					attrs: { velocidade: 89, resistencia: 76, precisao: 84, forca: 62, desarme: 40, posicionamento: 82, dominio: 88, drible: 92 }
+				}),
+				makeStarOffer({
+					tag: "maldini", name: "Paolo Maldini", pos: "ZGE", line: "def", tier: "lenda", ovr: 89, cost: 2100000,
+					nat: { id: "IT", flag: "🇮🇹", name: "Itália", nameEn: "Italy" },
+					attrs: { velocidade: 78, resistencia: 86, precisao: 80, forca: 82, desarme: 92, posicionamento: 94, dominio: 78, drible: 70 }
+				})
+			];
 		}
 
 		function generateMarketBatch(count) {
@@ -3903,37 +4063,35 @@
 				usedNames.add(o.name);
 				list.push(o);
 			}
-			// Neymar: 50% de chance de aparecer no lote do dia
-			if (Math.random() < 0.5 && !usedNames.has("Neymar Jr")) {
-				list.unshift(makeNeymarOffer());
-			}
+			starMarketPlayers().forEach(s => {
+				if (!usedNames.has(s.name)) {
+					usedNames.add(s.name);
+					list.unshift(s);
+				}
+			});
 			return list;
 		}
 
-		function ensureMarketOffers(force) {
-			if (!beta.market) beta.market = { offers: [], dayKey: "", matchStamp: 0 };
-			const dayKey = getDailyPeriodKey();
-			const needDaily = beta.market.dayKey !== dayKey;
-			const needInit = !beta.market.offers || beta.market.offers.length < 21;
-			if (force || needDaily || needInit) {
-				const size = 21 + Math.floor(Math.random() * 8); // 21~28 ofertas
-				beta.market.offers = generateMarketBatch(size);
-				beta.market.dayKey = dayKey;
-				beta.market.matchStamp = (beta.market.matchStamp || 0) + 1;
-				if (needDaily) addNews("Mercado diário atualizado: " + size + " jogadores disponíveis.");
-				else if (force) addNews("Mercado atualizado após a partida (" + size + " ofertas).");
-				saveBeta();
+		function ensureMarketOffers() {
+			if (!beta.market) beta.market = { offers: [], frozen: true };
+			if (!beta.market.offers || beta.market.offers.length < 36) {
+				beta.market.offers = generateMarketBatch(48);
+				beta.market.frozen = true;
 			}
+			const have = new Set((beta.market.offers || []).map(o => String(o.name || "").toLowerCase()));
+			starMarketPlayers().forEach(s => {
+				if (!have.has(s.name.toLowerCase())) {
+					beta.market.offers.unshift(s);
+					have.add(s.name.toLowerCase());
+				}
+			});
+			const owned = new Set((beta.roster || []).map(p => String(p.name || "").toLowerCase()));
+			beta.market.offers = (beta.market.offers || []).filter(o => !owned.has(String(o.name || "").toLowerCase()));
 			return beta.market.offers;
 		}
 
 		function refreshMarketAfterMatch() {
-			const size = 21 + Math.floor(Math.random() * 8);
-			if (!beta.market) beta.market = { offers: [], dayKey: getDailyPeriodKey(), matchStamp: 0 };
-			beta.market.offers = generateMarketBatch(size);
-			beta.market.matchStamp = (beta.market.matchStamp || 0) + 1;
-			addNews("Mercado rotacionou: " + size + " novos jogadores.");
-			saveBeta();
+			// Mercado fixo: não rotaciona mais
 		}
 
 		function rollAttrs(keys) {
@@ -4158,6 +4316,9 @@
 						if (!d.badges) d.badges = [];
 						if (!d.customForms) d.customForms = [];
 						if (!d.redeemedCodes) d.redeemedCodes = {};
+						if (!d.packs) d.packs = [];
+						if (!d.packLimits) d.packLimits = {};
+						if (!d.starterPackGiven) d.starterPackGiven = false;
 						// Garante formação custom na lista em memória
 						if (d.lineupForm && !FORM_LIST.includes(d.lineupForm) && !d.customForms.includes(d.lineupForm)) {
 							d.customForms.push(d.lineupForm);
@@ -5553,12 +5714,16 @@
 				contractTokens: 0,
 				badges: [],
 				hallOfFame: [],
-				customForms: []
+				customForms: [],
+				packs: [],
+				packLimits: {},
+				starterPackGiven: false
 			};
 			saveBeta();
+			grantStarterPackIfNeeded();
 			document.getElementById("setupOverlay").classList.remove("open");
 			try { fillDifficultySelect(); updateCoinUI(); renderMenuTrophyPreview(); } catch (e) {}
-			alert("Clube " + cn + " fundado!\n" + formatCoins(startCoins) + "🪙 no caixa.");
+			alert("Clube " + cn + " fundado!\n" + formatCoins(startCoins) + "🪙 no caixa.\nPacote raro grátis em Elenco → Meus pacotes.");
 		}
 		function maybeOpenSetup() {
 			if (beta.needsSetup || !beta.roster || beta.roster.length < 11 || !beta.teamName) {
@@ -5575,7 +5740,8 @@
 			"sixseven": { type: "coins", amount: 1, label: "sixseven" },
 			"poopplayer": { type: "poop", label: "poopplayer" },
 			"crazygames": { type: "coins", amount: 10000, label: "crazygames" },
-			"tonozapp": { type: "coins", amount: 200000, label: "tonozapp" }
+			"tonozapp": { type: "coins", amount: 200000, label: "tonozapp" },
+			"littlemarket": { type: "pack", pack: "rare", label: "littlemarket" }
 		};
 		function openSecretCode() {
 			if (!beta.redeemedCodes) beta.redeemedCodes = {};
@@ -5633,6 +5799,9 @@
 				beta.roster.push(p);
 				addNews("✦ Código rippele: Pelé entrou no elenco!");
 				if (msg) { msg.style.color = "#81c784"; msg.textContent = "Pelé (CA · Lenda) adicionado!"; }
+			} else if (def.type === "pack") {
+				grantPack(def.pack || "rare", "Código " + def.label);
+				if (msg) { msg.style.color = "#81c784"; msg.textContent = "Pacote raro adicionado em Meus pacotes!"; }
 			} else if (def.type === "poop") {
 				const attrs = {
 					velocidade: 1, resistencia: 1, precisao: 1, forca: 1,
@@ -5893,64 +6062,268 @@
 			return beta.dailyClaimKey !== getDailyPeriodKey();
 		}
 
-		// ===== Menu principal: seções Q/E =====
-		let menuSection = "game"; // game | squad | settings
-		let playMode = "friendly"; // friendly | league
-		const MENU_SECTIONS = ["game", "squad", "settings"];
-
+		// ===== Hub eFootball =====
+		let menuSection = "home";
+		let playMode = "friendly";
+		const HUB_PARENT = {
+			home: null, play: "home", tourney: "play", friendly: "play", events: "play", online: "play",
+			squad: "home", myteam: "squad", market: "squad", packs: "squad", trophies: "squad", shop: "squad",
+			settings: "home"
+		};
+		const HUB_TITLE = {
+			home: "SCHOOL SOCCER", play: "JOGAR", tourney: "TORNEIO IA", friendly: "AMISTOSO IA",
+			events: "EVENTOS", online: "ONLINE", squad: "ELENCO", myteam: "MEU TIME",
+			market: "MERCADO", packs: "MEUS PACOTES", trophies: "TROFÉUS", shop: "MERCADINHO", settings: "CONFIGURAÇÕES"
+		};
+		const MENU_SECTIONS = ["play", "squad", "settings"];
+		const HUB_IDS = {
+			home: "hubHome", play: "hubPlay", tourney: "hubTourney", friendly: "hubFriendly",
+			events: "hubEvents", online: "hubOnline", squad: "hubSquad", myteam: "hubMyTeam",
+			market: "hubMarket", packs: "hubPacks", trophies: "hubTrophies", shop: "hubShop", settings: "hubSettings"
+		};
+		function hubGo(id) {
+			menuSection = id;
+			const want = HUB_IDS[id] || "hubHome";
+			document.querySelectorAll(".hub-screen").forEach(el => el.classList.toggle("on", el.id === want));
+			const crumb = document.getElementById("hubCrumb");
+			if (crumb) crumb.innerHTML = "<b>" + (HUB_TITLE[id] || "SCHOOL SOCCER") + "</b>";
+			const back = document.getElementById("hubBackBtn");
+			if (back) back.style.visibility = id === "home" ? "hidden" : "visible";
+			if (id === "tourney") { playMode = "league"; try { renderCareerPanel(); } catch (e) {} }
+			if (id === "friendly") playMode = "friendly";
+			if (id === "online") { playMode = "online"; try { renderOnlineMe(); onlineConnect(); } catch (e) {} }
+			if (id === "trophies") { try { renderMenuTrophyPreview(); } catch (e) {} }
+			if (id === "shop") { try { renderShopBox(); } catch (e) {} }
+			if (id === "market") { try { renderHubMarket(); } catch (e) {} }
+			if (id === "packs") { try { renderHubPacks(); } catch (e) {} }
+			if (id === "home") { try { refreshHubHero(); } catch (e) {} }
+			updateCoinUI();
+		}
+		function hubBack() {
+			const p = HUB_PARENT[menuSection];
+			hubGo(p || "home");
+		}
 		function setMenuSection(sec) {
-			menuSection = sec;
-			MENU_SECTIONS.forEach(s => {
-				const el = document.getElementById("sec" + s.charAt(0).toUpperCase() + s.slice(1));
-				const btn = document.getElementById("navSec" + s.charAt(0).toUpperCase() + s.slice(1));
-				if (el) {
-					el.classList.toggle("on", s === sec);
-					if (s === sec) {
-						el.classList.remove("menu-section");
-						void el.offsetWidth;
-						el.classList.add("menu-section");
-					}
-				}
-				if (btn) btn.classList.toggle("on", s === sec);
-			});
-			if (sec === "squad") renderMenuTrophyPreview();
-			if (sec === "game" && playMode === "league") {
-				try { renderCareerPanel(); } catch (e) {}
-			}
+			if (sec === "game") hubGo("play");
+			else hubGo(sec);
 		}
 		function cycleMenuSection(dir) {
-			const i = MENU_SECTIONS.indexOf(menuSection);
+			const i = MENU_SECTIONS.indexOf(menuSection === "home" ? "play" : menuSection);
 			const n = (i + dir + MENU_SECTIONS.length) % MENU_SECTIONS.length;
-			setMenuSection(MENU_SECTIONS[n]);
+			hubGo(MENU_SECTIONS[n]);
+		}
+		function refreshHubHero() {
+			const t = document.getElementById("hubClubTitle");
+			const m = document.getElementById("hubClubMeta");
+			if (t) t.textContent = beta.teamName || "School Soccer";
+			if (m) {
+				ensureOnlineStats();
+				m.textContent = "OVR " + teamOverallXI() + " · Rating " + (beta.online.rating || 800) + " · " + formatCoins(beta.coins || 0) + "🪙";
+			}
+		}
+		const PACK_DEFS = {
+			daily: { id: "daily", name: "Pacote diário", cost: 0, limit: "daily21", cards: 1, odds: { basico: 80, bronze: 9, prata: 1 } },
+			simple: { id: "simple", name: "Pacote simples", cost: 70000, limit: "day3", cards: 1, odds: { basico: 70, bronze: 20, prata: 9, ouro: 1 } },
+			rare: { id: "rare", name: "Pacote raro", cost: 150000, limit: "day1", cards: 1, odds: { basico: 50, bronze: 20, prata: 10, ouro: 8, especial: 2 } },
+			epic: { id: "epic", name: "Pacote épico", cost: 400000, limit: "week1", cards: 1, odds: { bronze: 40, prata: 30, ouro: 15, especial: 5, lenda: 0.1 } }
+		};
+		function packPeriodKey(kind) {
+			const now = new Date();
+			if (kind === "week1") {
+				const onejan = new Date(now.getFullYear(), 0, 1);
+				const week = Math.floor((((now - onejan) / 86400000) + onejan.getDay() + 1) / 7);
+				return now.getFullYear() + "-W" + week;
+			}
+			return getDailyPeriodKey();
+		}
+		function packLimitLeft(def) {
+			if (!beta.packLimits) beta.packLimits = {};
+			const slot = beta.packLimits[def.id] || { key: "", n: 0 };
+			const key = packPeriodKey(def.limit);
+			if (slot.key !== key) return def.limit === "day3" ? 3 : 1;
+			const max = def.limit === "day3" ? 3 : 1;
+			return Math.max(0, max - (slot.n || 0));
+		}
+		function consumePackLimit(def) {
+			if (!beta.packLimits) beta.packLimits = {};
+			const key = packPeriodKey(def.limit);
+			const slot = beta.packLimits[def.id] || { key: "", n: 0 };
+			if (slot.key !== key) { slot.key = key; slot.n = 0; }
+			slot.n++;
+			beta.packLimits[def.id] = slot;
+		}
+		function grantPack(type, reason) {
+			const def = PACK_DEFS[type];
+			if (!def) return;
+			if (!beta.packs) beta.packs = [];
+			beta.packs.push({ id: "pk_" + Date.now().toString(36) + "_" + Math.floor(Math.random() * 1e5), type, name: def.name, t: Date.now() });
+			addNews((reason || "Pacote") + ": " + def.name);
+		}
+		function grantStarterPackIfNeeded() {
+			if (beta.starterPackGiven) return;
+			if (!beta.roster || beta.roster.length < 11) return;
+			const played = beta.career && beta.career.stats && (beta.career.stats.matches || 0) > 0;
+			if (played) { beta.starterPackGiven = true; saveBeta(); return; }
+			grantPack("rare", "Pacote de boas-vindas");
+			beta.starterPackGiven = true;
+			saveBeta();
+		}
+		function rollTierFromOdds(odds) {
+			const entries = Object.keys(odds).map(k => [k, odds[k]]);
+			const total = entries.reduce((s, e) => s + e[1], 0);
+			let r = Math.random() * (total || 100);
+			for (const [k, w] of entries) {
+				r -= w;
+				if (r <= 0) return k;
+			}
+			return entries[0][0];
+		}
+		function packPlayerFromTier(tierId) {
+			const stars = starMarketPlayers();
+			if (tierId === "lenda" && Math.random() < 0.45) {
+				return stars[Math.floor(Math.random() * stars.length)];
+			}
+			const offer = generateMarketOffer();
+			const tier = MARKET_DB.tiers.find(t => t.id === tierId) || MARKET_DB.tiers[0];
+			offer.tier = tier.id;
+			offer.tierLabel = tier.label;
+			offer.cardTier = tier.id === "evento" ? "ouro" : tier.id;
+			const keys = offer.role === "gk" ? GK_ATTRS : FIELD_ATTRS;
+			keys.forEach(k => {
+				const span = Math.max(0, tier.maxOvr - tier.minOvr);
+				offer.attrs[k] = Math.min(100, Math.max(50, tier.minOvr + Math.floor(Math.random() * (span + 1))));
+			});
+			return offer;
+		}
+		function addOfferToRoster(m) {
+			const owned = (beta.roster || []).some(p => String(p.name).toLowerCase() === String(m.name).toLowerCase());
+			if (owned) {
+				const coins = Math.round((m.cost || 40000) * 0.25);
+				beta.coins = (beta.coins || 0) + coins;
+				addNews(m.name + " repetido → +" + formatCoins(coins) + "🪙");
+				return { dupe: true, coins, name: m.name };
+			}
+			const isGk = m.role === "gk";
+			const id = beta.nextId != null ? beta.nextId : (beta.roster.reduce((mx, p) => Math.max(mx, p.id), 0) + 1);
+			beta.nextId = id + 1;
+			const prefPos = m.prefPos || (isGk ? "GOL" : "VO");
+			const np = {
+				id, name: m.name, role: isGk ? "gk" : "field", line: m.line || lineOfPos(prefPos), prefPos,
+				attrs: JSON.parse(JSON.stringify(m.attrs)),
+				nat: m.nat || randomNationality(),
+				cardTier: m.cardTier || m.tier,
+				career: { matches: 0, goals: 0, tackles: 0, assists: 0, passes: 0, shots: 0 },
+				contract: { type: "matches", remaining: 30, total: 30, template: "temporada" },
+				skill: m.skill || null,
+				uniqueTag: m.uniqueTag || null,
+				dribbles: Array.isArray(m.dribbles) ? m.dribbles.slice() : rollAttackerDribbles(prefPos, !!m.uniqueTag)
+			};
+			ensurePlayerMeta(np);
+			beta.roster.push(np);
+			addNews("Figurinha: " + m.name + " (" + (m.tierLabel || m.cardTier || "") + ")");
+			return { dupe: false, player: np };
+		}
+		function buyPack(type) {
+			const def = PACK_DEFS[type];
+			if (!def) return;
+			const left = packLimitLeft(def);
+			if (left <= 0) { alert("Limite deste pacote por agora."); return; }
+			if ((beta.coins || 0) < def.cost) { alert("Moedas insuficientes."); return; }
+			beta.coins -= def.cost;
+			consumePackLimit(def);
+			grantPack(type, "Comprou");
+			saveBeta(); updateCoinUI(); renderShopBox();
+			alert(def.name + " foi para Elenco → Meus pacotes.");
+		}
+		function openOwnedPack(packId) {
+			if (!beta.packs) return;
+			const idx = beta.packs.findIndex(p => p.id === packId);
+			if (idx < 0) return;
+			const pack = beta.packs[idx];
+			const def = PACK_DEFS[pack.type] || PACK_DEFS.simple;
+			const rolled = packPlayerFromTier(rollTierFromOdds(def.odds));
+			const res = addOfferToRoster(rolled);
+			beta.packs.splice(idx, 1);
+			saveBeta(); updateCoinUI();
+			renderSquadList();
+			alert(res.dupe
+				? ("Repetida: " + res.name + " · +" + formatCoins(res.coins) + "🪙")
+				: ("Você tirou " + rolled.name + " · " + (rolled.tierLabel || rolled.cardTier)));
+		}
+		function renderShopBox() {
+			const box = document.getElementById("shopBox");
+			if (!box) return;
+			const tokenCost = 80000;
+			const packHtml = Object.keys(PACK_DEFS).map(id => {
+				const d = PACK_DEFS[id];
+				const left = packLimitLeft(d);
+				const odds = Object.keys(d.odds).map(k => k + " " + d.odds[k] + "%").join(" · ");
+				return `<div class="hub-tile" style="cursor:default;margin-bottom:8px">
+					<b>${d.name}</b>
+					<p>${d.cost ? formatCoins(d.cost) + "🪙" : "Grátis"} · restam ${left}<br>${odds}</p>
+					<button type="button" class="btn-sec gold" ${left <= 0 ? "disabled" : ""} onclick="buyPack('${id}')">${d.cost ? "Comprar" : "Resgatar"}</button>
+				</div>`;
+			}).join("");
+			box.innerHTML = packHtml + `<div class="hub-tile" style="cursor:default;margin-bottom:8px">
+				<b>Renovador de contrato</b>
+				<p>Você tem ${beta.contractTokens || 0}. Custa ${formatCoins(tokenCost)}🪙</p>
+				<button type="button" class="btn-sec gold" onclick="buyContractToken()">Comprar</button>
+			</div>
+			<div class="hub-tile" style="cursor:default">
+				<b>Moral do elenco</b>
+				<p>+8 de vontade no clube para todos. ${formatCoins(45000)}🪙</p>
+				<button type="button" class="btn-sec" onclick="buyTeamMorale()">Comprar</button>
+			</div>`;
+		}
+		function buyContractToken() {
+			if ((beta.coins || 0) < 80000) { alert("Moedas insuficientes."); return; }
+			beta.coins -= 80000;
+			beta.contractTokens = (beta.contractTokens || 0) + 1;
+			saveBeta(); updateCoinUI(); renderShopBox();
+		}
+		function renderHubMarket() {
+			const box = document.getElementById("hubMarketList");
+			if (!box) return;
+			const offers = ensureMarketOffers();
+			box.innerHTML = `<p class="menu-hint">${offers.length} jogadores</p>` + offers.map(m => {
+				const fake = { name: m.name, role: m.role, prefPos: m.prefPos, attrs: m.attrs, cardTier: m.cardTier || m.tier, nat: m.nat };
+				return `<div onclick="previewMarketPlayer('${m.uid}')">${buildPlayerCardHTML(fake, { cost: m.cost, uid: m.uid })}</div>`;
+			}).join("");
+		}
+		function renderHubPacks() {
+			const box = document.getElementById("hubPacksList");
+			if (!box) return;
+			grantStarterPackIfNeeded();
+			const packs = beta.packs || [];
+			if (!packs.length) {
+				box.innerHTML = "<p class='menu-hint'>Nenhum pacote. Compre no Mercadinho.</p>";
+				return;
+			}
+			box.innerHTML = packs.map(pk =>
+				`<div class="hub-tile gold" onclick="openOwnedPack('${pk.id}');renderHubPacks();">
+					<div class="ht-kicker">FIGURINHA</div><b>${pk.name || pk.type}</b><p>Toque para revelar</p>
+				</div>`
+			).join("");
+		}
+		function buyTeamMorale() {
+			if ((beta.coins || 0) < 45000) { alert("Moedas insuficientes."); return; }
+			beta.coins -= 45000;
+			(beta.roster || []).forEach(p => { p.clubMorale = Math.min(100, (p.clubMorale || 75) + 8); });
+			saveBeta(); updateCoinUI(); renderShopBox();
+			alert("Moral do elenco aumentou.");
+		}
+		function onlineQuickMatch() {
+			onlineConnect();
+			setTimeout(() => {
+				const rooms = document.querySelectorAll("#onlineRoomList button");
+				if (rooms.length) rooms[0].click();
+				else onlineCreateRoom();
+			}, 800);
 		}
 		function selectPlayMode(mode) {
 			playMode = mode;
-			const f = document.getElementById("modeFriendly");
-			const l = document.getElementById("modeLeague");
-			const o = document.getElementById("modeOnline");
-			if (f) f.classList.toggle("selected", mode === "friendly");
-			if (l) l.classList.toggle("selected", mode === "league");
-			if (o) o.classList.toggle("selected", mode === "online");
-			const fo = document.getElementById("friendlyOpts");
-			const lo = document.getElementById("leagueOpts");
-			const oo = document.getElementById("onlineOpts");
-			if (fo) fo.style.display = mode === "friendly" ? "block" : "none";
-			if (lo) lo.style.display = mode === "league" ? "block" : "none";
-			if (oo) oo.style.display = mode === "online" ? "block" : "none";
-			const btn = document.getElementById("btnStartMain");
-			if (btn) {
-				btn.style.display = mode === "friendly" ? "block" : "none";
-			}
-			if (mode === "online") {
-				try { renderOnlineMe(); } catch (e) {}
-			}
-			if (mode === "league") {
-				try {
-					const box = document.getElementById("careerBox");
-					if (box) box.style.display = "block";
-					renderCareerPanel();
-				} catch (e) {}
-			}
+			if (mode === "online") { try { renderOnlineMe(); } catch (e) {} }
+			if (mode === "league") { try { renderCareerPanel(); } catch (e) {} }
 		}
 		function renderMenuTrophyPreview() {
 			const box = document.getElementById("menuTrophyPreview");
@@ -5999,6 +6372,8 @@
 			sanitizeCoins();
 			const el = document.getElementById("coinDisplay");
 			if (el) el.textContent = isAdmin() ? "∞" : formatCoins(beta.coins);
+			const hub = document.getElementById("hubCoinDisplay");
+			if (hub) hub.textContent = isAdmin() ? "∞" : formatCoins(beta.coins);
 			const dh = document.getElementById("dailyHint");
 			if (dh && !dh.textContent.includes("+50")) {
 				dh.textContent = canClaimDaily() ? "Recompensa diária disponível!" : "Diária já resgatada (21h).";
@@ -6206,6 +6581,7 @@
 		let suppressSquadCardClick = false; // após arrastar, não abrir detalhe
 
 		function openSquadMenu() {
+			squadTab = "all";
 			processPendingOffers();
 			const formSel = document.getElementById("sqFormSelect");
 			if (formSel) {
@@ -6249,7 +6625,7 @@
 		function setSquadTab(t) {
 			squadTab = t;
 			const map = {
-				xi: "tabXi", bench: "tabBench", all: "tabAll", contract: "tabContract",
+				xi: "tabXi", bench: "tabBench", all: "tabAll", contract: "tabContract", packs: "tabPacks",
 				deals: "tabDeals", tactics: "tabTactics", team: "tabTeam", tour: "tabTour",
 				progress: "tabProgress", events: "tabEvents", trophies: "tabTrophies", news: "tabNews"
 			};
@@ -6574,6 +6950,28 @@
 				return;
 			}
 
+			if (squadTab === "packs") {
+				grantStarterPackIfNeeded();
+				const title = document.createElement("div");
+				title.style.cssText = "padding:8px;color:#e8c547;font-weight:bold";
+				title.textContent = "Meus pacotes — toque para abrir";
+				list.appendChild(title);
+				const packs = beta.packs || [];
+				if (!packs.length) {
+					const empty = document.createElement("p");
+					empty.className = "menu-hint";
+					empty.textContent = "Nenhum pacote. Compre no Mercadinho.";
+					list.appendChild(empty);
+				}
+				packs.forEach(pk => {
+					const card = document.createElement("div");
+					card.className = "hub-tile gold";
+					card.innerHTML = `<div class="ht-kicker">FIGURINHA</div><b>${pk.name || pk.type}</b><p>Toque para revelar o jogador</p>`;
+					card.onclick = () => openOwnedPack(pk.id);
+					list.appendChild(card);
+				});
+				return;
+			}
 			if (squadTab === "contract") {
 				processPendingOffers();
 				const title = document.createElement("div");
@@ -6584,7 +6982,7 @@
 				const offers = ensureMarketOffers(false);
 				const head = document.createElement("div");
 				head.style.cssText = "padding:4px 8px 8px;font-size:11px;opacity:0.85;color:#ffd700";
-				head.textContent = "Mercado vivo · " + offers.length + " · atualiza a cada partida e todo dia (21h)";
+				head.textContent = "Catálogo fixo · " + offers.length + " jogadores · sem repetir o elenco";
 				list.appendChild(head);
 				if (isAdmin()) {
 					const adm = document.createElement("button");
@@ -8905,6 +9303,13 @@
 					userPlayer.isUser = true;
 				}
 			}
+			refreshJoySkillLook();
+		}
+		function refreshJoySkillLook() {
+			if (!joyKnob || !joyBase) return;
+			const has = !!(userPlayer && userPlayer.skill && !userPlayer.skillUsedThisMatch);
+			joyKnob.classList.toggle("has-skill", has);
+			joyBase.classList.toggle("has-skill", has);
 		}
 		function setControlledPlayer(p) {
 			if (!p || p.isSentOff) return;
@@ -8912,6 +9317,7 @@
 			p.isUser = true;
 			userPlayer = p;
 			p.stunTime = 0;
+			refreshJoySkillLook();
 		}
 		function switchToNextNearBall() {
 			if (!userPlayer) return;
@@ -12687,6 +13093,8 @@
 				updateCoinUI();
 				refreshDiffSelect();
 				setTutorialMenuOnly(true);
+				hubGo("home");
+				grantStarterPackIfNeeded();
 			} catch (e) { console.warn(e); }
 			setTimeout(() => {
 				try { CG.loadingStop(); } catch (e) {}
