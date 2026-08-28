@@ -2813,6 +2813,7 @@
 				touchId = t ? t.identifier : "mouse";
 				mobile[key] = true;
 				btn.classList.add("active");
+				queueOnlineAct(key + "Down");
 			};
 			const release = (e) => {
 				e.preventDefault();
@@ -2823,6 +2824,7 @@
 							mobile[key] = false;
 							btn.classList.remove("active");
 							touchId = null;
+							queueOnlineAct(key + "Up");
 							break;
 						}
 					}
@@ -2830,6 +2832,7 @@
 					mobile[key] = false;
 					btn.classList.remove("active");
 					touchId = null;
+					queueOnlineAct(key + "Up");
 				}
 			};
 
@@ -2864,6 +2867,7 @@
 				const taps = (now - lastDriTapAt < 320) ? 2 : 1;
 				lastDriTapAt = now;
 				if (userPlayer) tryDribble(userPlayer, taps);
+				queueOnlineAct(taps >= 2 ? "dribble2" : "dribble");
 			};
 			btn.addEventListener("touchstart", (e) => {
 				e.preventDefault();
@@ -3029,8 +3033,10 @@
 					if (t.identifier === touchId) {
 						clearHold();
 						if (!holdTriggered) {
-							// Toque curto → mais próximo da bola
 							mobile.switchPlayer = true;
+							queueOnlineAct("switch");
+						} else {
+							queueOnlineAct("switchGK");
 						}
 						touchId = null;
 						btn.classList.remove("active");
@@ -3089,6 +3095,11 @@
 				updateMentalityDisplay();
 			}
 			keys[e.code] = true; keys[e.key] = true;
+			if (window.onlineMatch && window.onlineMatch.active && gameState === "playing") {
+				if (e.code === "Space" || e.code === "KeyK") queueOnlineAct("shootDown");
+				if (e.code === "KeyP") queueOnlineAct("passDown");
+				if (e.code === "KeyL") queueOnlineAct("crossDown");
+			}
 			if (gameState === "playing" && !typing) {
 				if (e.code === "KeyW") pushDribDir("U");
 				if (e.code === "KeyS") pushDribDir("D");
@@ -3096,7 +3107,16 @@
 				if (e.code === "KeyD") pushDribDir("R");
 			}
 		});
-		window.addEventListener("keyup", (e) => { keys[e.code] = false; keys[e.key] = false; });
+		window.addEventListener("keyup", (e) => {
+			keys[e.code] = false; keys[e.key] = false;
+			if (window.onlineMatch && window.onlineMatch.active) {
+				if (e.code === "Space" || e.code === "KeyK") queueOnlineAct("shootUp");
+				if (e.code === "KeyP") queueOnlineAct("passUp");
+				if (e.code === "KeyL") queueOnlineAct("crossUp");
+				if (e.code === "KeyO") queueOnlineAct("switch");
+				if (e.code === "KeyF") queueOnlineAct("dribble");
+			}
+		});
 
 		// Mouse no canvas (mira de cobrança no PC)
 		let useMouseAim = true;
@@ -8128,6 +8148,9 @@
 			}
 			if (msg.type === "input" && window.onlineMatch.active) {
 				window.onlineMatch.remoteInput = msg.input || null;
+				if (msg.input && msg.input.acts && msg.input.acts.length) {
+					window.onlineMatch.pendingActs = (window.onlineMatch.pendingActs || []).concat(msg.input.acts);
+				}
 			}
 			if (msg.type === "state" && window.onlineMatch.active && window.onlineMatch.role === "guest") {
 				applyOnlineState(msg.state);
@@ -8274,6 +8297,7 @@
 		}
 		function collectOnlineInput() {
 			const joyOn = Math.hypot(mobile.dx || 0, mobile.dy || 0) > 0.05;
+			const acts = (window.onlineMatch.acts || []).splice(0);
 			return {
 				dx: joyOn ? mobile.dx : ((keys["KeyD"]?1:0) - (keys["KeyA"]?1:0)),
 				dy: joyOn ? mobile.dy : ((keys["KeyS"]?1:0) - (keys["KeyW"]?1:0)),
@@ -8282,34 +8306,114 @@
 				shoot: !!(keys["Space"] || keys["KeyK"] || mobile.shoot),
 				cross: !!(keys["KeyL"] || mobile.cross),
 				dribble: !!(keys["KeyF"] || mobile.dribble),
-				switchP: !!(keys["KeyO"] || mobile.switchPlayer)
+				switchP: !!(keys["KeyO"] || mobile.switchPlayer),
+				sel: players && userPlayer ? players.indexOf(userPlayer) : -1,
+				acts: acts
 			};
+		}
+		function queueOnlineAct(act) {
+			if (!window.onlineMatch) return;
+			if (!window.onlineMatch.acts) window.onlineMatch.acts = [];
+			window.onlineMatch.acts.push(act);
+			if (window.onlineMatch.active && onlineWs && onlineWs.readyState === 1) {
+				onlineSend({ type: "input", input: collectOnlineInput() });
+			}
+		}
+		function onlineRemotePlayer(inp) {
+			const team = 2;
+			if (inp && Number.isInteger(inp.sel) && players[inp.sel] && players[inp.sel].team === team && !players[inp.sel].isSentOff) {
+				return players[inp.sel];
+			}
+			return players.find(p => p.team === team && p._onlineRemote)
+				|| players.filter(p => p.team === team && p.role === "field" && !p.isSentOff)
+					.sort((a,b) => Math.hypot(a.x-ball.x,a.y-ball.y)-Math.hypot(b.x-ball.x,b.y-ball.y))[0];
+		}
+		function setOnlineRemote(p) {
+			if (!p) return p;
+			players.forEach(x => { if (x.team === p.team) x._onlineRemote = false; });
+			p._onlineRemote = true;
+			return p;
+		}
+		function onlineFireShot(p, kind) {
+			if (!p || p.stunTime > 0) return;
+			if (ball.holder === p) {
+				if (kind === "pass") {
+					p.power = Math.max(2.2, Math.min(6, (p.passHold || 8) * 0.35));
+					p.shoot(ball, 1);
+				} else if (kind === "cross") {
+					if (typeof triggerCross === "function") triggerCross(p);
+				} else {
+					p.power = Math.max(4.5, p.power || 8);
+					p.shoot(ball);
+				}
+				p.power = 0; p.passHold = 0; p.shootPrep = 0;
+				return;
+			}
+			if (kind === "pass" && ball.holder && ball.holder.team !== p.team && p.tackleCooldown <= 0) {
+				const distB = Math.hypot(p.x - ball.x, p.y - ball.y);
+				const distP = Math.hypot(p.x - ball.holder.x, p.y - ball.holder.y);
+				const tRange = Math.max(32, p.tackleRange || 32);
+				if (distB < tRange + 14 && distP < tRange + 22) p.executeSuccessfulTackle(ball);
+			}
 		}
 		function applyRemoteToPlayer(p, inp) {
 			if (!p || !inp) return;
+			p = setOnlineRemote(p);
 			const dx = Number(inp.dx) || 0, dy = Number(inp.dy) || 0;
-			if (Math.abs(dx) > 0.05 || Math.abs(dy) > 0.05) {
-				p.setFacing(dx, dy);
-				const spd = inp.sprint ? p.sprintSpeed : p.baseSpeed;
+			if (p.stunTime <= 0 && (Math.abs(dx) > 0.04 || Math.abs(dy) > 0.04)) {
 				const n = Math.hypot(dx, dy) || 1;
+				p.setFacing(dx / n, dy / n);
+				const spd = (inp.sprint ? p.sprintSpeed : p.baseSpeed) * (typeof skillSpeedMul === "function" ? skillSpeedMul(p) : 1);
 				p.x += (dx / n) * spd;
 				p.y += (dy / n) * spd;
 				p.x = Math.max(p.radius, Math.min(fieldWidth - p.radius, p.x));
 				p.y = Math.max(p.radius, Math.min(fieldHeight - p.radius, p.y));
 			}
-			if (inp.switchP) {
-				const near = players.filter(x => x.team === p.team && !x.isSentOff && x.role === "field")
-					.sort((a,b) => Math.hypot(a.x-ball.x,a.y-ball.y)-Math.hypot(b.x-ball.x,b.y-ball.y))[0];
-				if (near && near !== p) {
-					players.forEach(x => { if (x.team === p.team) { x.isUser = false; x._onlineRemote = false; } });
-					near._onlineRemote = true;
+			if (!ball.inAir && ball.cooldown <= 0 && !ball.holder) {
+				const dBall = Math.hypot(p.x - ball.x, p.y - ball.y);
+				if (dBall < (p.controlRange || 28) + ball.radius + 8) {
+					ball.holder = p; ball.vx = 0; ball.vy = 0;
+					lastTouchTeam = p.team; lastTouchPlayer = p;
 				}
-				inp.switchP = false;
 			}
+			if (inp.shoot && ball.holder === p) {
+				p.shootPrep = (p.shootPrep || 0) + 1;
+				if (p.shootPrep > 6) p.power = Math.min(12, (p.power || 0) + 0.35);
+			}
+			if (inp.pass && ball.holder === p) p.passHold = (p.passHold || 0) + 1;
+			const acts = window.onlineMatch.pendingActs || [];
+			window.onlineMatch.pendingActs = [];
+			acts.forEach(act => {
+				if (act === "shootDown") p.shootPrep = 1;
+				if (act === "shootUp") onlineFireShot(p, "shoot");
+				if (act === "passDown") p.passHold = Math.max(p.passHold || 0, 1);
+				if (act === "passUp") onlineFireShot(p, "pass");
+				if (act === "crossDown" || act === "crossUp") onlineFireShot(p, "cross");
+				if (act === "dribble" || act === "dribble2") {
+					if (typeof tryDribble === "function") tryDribble(p, act === "dribble2" ? 2 : 1);
+				}
+				if (act === "switch" || act === "switchGK") {
+					p.passHold = 0; p.shootPrep = 0; p.power = 0;
+					const had = ball.holder === p;
+					let next = null;
+					if (act === "switchGK") next = players.find(x => x.team === p.team && x.role === "gk" && !x.isSentOff);
+					if (!next) {
+						next = players.filter(x => x.team === p.team && !x.isSentOff && x !== p)
+							.sort((a,b) => Math.hypot(a.x-ball.x,a.y-ball.y)-Math.hypot(b.x-ball.x,b.y-ball.y))[0];
+					}
+					if (next) {
+						p = setOnlineRemote(next);
+						if (had) { ball.holder = next; ball.vx = 0; ball.vy = 0; }
+					}
+				}
+			});
 		}
 		function snapshotOnlineState() {
 			return {
 				ball: { x: ball.x, y: ball.y, vx: ball.vx, vy: ball.vy, h: ball.height || 0, air: !!ball.inAir },
+				hid: ball.holder ? players.indexOf(ball.holder) : -1,
+				ctrl2: players.findIndex(p => p.team === 2 && p._onlineRemote),
+				ctrl1: players.findIndex(p => p.team === 1 && p.isUser),
 				score: [scoreBlue, scoreRed],
 				time: matchTimeLeft,
 				players: players.map(p => ({
@@ -8323,8 +8427,17 @@
 			if (!st) return;
 			if (st.ball) {
 				ball.x = st.ball.x; ball.y = st.ball.y;
-				ball.vx = st.ball.vx; ball.vy = st.ball.vy;
+				ball.vx = st.ball.vx || 0; ball.vy = st.ball.vy || 0;
 				ball.height = st.ball.h || 0; ball.inAir = !!st.ball.air;
+			}
+			if (typeof st.hid === "number" && st.hid >= 0 && players[st.hid]) {
+				ball.holder = players[st.hid];
+				if (!st.ball || !st.ball.air) { ball.vx = 0; ball.vy = 0; ball.inAir = false; }
+			} else {
+				ball.holder = null;
+			}
+			if (window.onlineMatch.role === "guest" && typeof st.ctrl2 === "number" && players[st.ctrl2]) {
+				setControlledPlayer(players[st.ctrl2]);
 			}
 			if (st.score) {
 				scoreBlue = st.score[0]; scoreRed = st.score[1];
@@ -8344,10 +8457,6 @@
 				for (let i = 0; i < n; i++) {
 					const p = players[i], s = st.players[i];
 					if (!p || !s) continue;
-					if (p === userPlayer && window.onlineMatch.role === "guest" && !(st.fx && st.fx.replay)) {
-						if (s.nm) p.displayName = s.nm;
-						continue;
-					}
 					p.x = s.x; p.y = s.y;
 					if (s.fx != null) p.facingX = s.fx;
 					if (s.fy != null) p.facingY = s.fy;
@@ -10601,12 +10710,7 @@
 			if (window.onlineMatch && window.onlineMatch.active && window.onlineMatch.role === "host") {
 				const inp = window.onlineMatch.remoteInput;
 				if (inp) {
-					let rp = players.find(p => p.team === 2 && p._onlineRemote);
-					if (!rp) {
-						rp = players.filter(p => p.team === 2 && p.role === "field" && !p.isSentOff)
-							.sort((a,b) => Math.hypot(a.x-ball.x,a.y-ball.y)-Math.hypot(b.x-ball.x,b.y-ball.y))[0];
-						if (rp) rp._onlineRemote = true;
-					}
+					const rp = onlineRemotePlayer(inp);
 					if (rp) applyRemoteToPlayer(rp, inp);
 				}
 			}
@@ -10617,7 +10721,6 @@
 					if (pick) setControlledPlayer(pick);
 				}
 				pumpOnlineNet();
-				moveLocalOnlinePlayer();
 				updateMatchCamera();
 				return;
 			}
