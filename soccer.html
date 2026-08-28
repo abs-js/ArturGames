@@ -8296,7 +8296,11 @@
 			if (players) {
 				players.forEach((p, i) => {
 					if (p.team !== team) return;
-					mine.push({ i: i, x: p.x, y: p.y, fx: p.facingX || 0, fy: p.facingY || 0, nm: p.displayName || p.positionName || "" });
+					mine.push({
+						i: i, x: p.x, y: p.y, fx: p.facingX || 0, fy: p.facingY || 0,
+						nm: p.displayName || p.positionName || "",
+						g: p.goals || 0, a: p.statAssists || 0, tk: p.statTackles || 0, sv: p.statSaves || 0
+					});
 				});
 			}
 			const hid = ball.holder ? players.indexOf(ball.holder) : -1;
@@ -8306,7 +8310,8 @@
 				players: mine,
 				acts: acts,
 				claim: (ball.holder && ball.holder.team === team) ? hid : -1,
-				ball: { x: ball.x, y: ball.y, vx: ball.vx || 0, vy: ball.vy || 0, h: ball.height || 0, air: !!ball.inAir, hid: hid },
+				owner: hid,
+				ball: { x: ball.x, y: ball.y, vx: ball.vx || 0, vy: ball.vy || 0, h: ball.height || 0, air: !!ball.inAir, hid: hid, owner: hid },
 				sp: setPiece ? { type: setPiece.type, team: setPiece.team, x: setPiece.x, y: setPiece.y, charge: setPiece.charge || 0, mode: setPiece.chargeMode || "", w: setPiece.whistle || 0 } : null,
 				dx: joyOn ? mobile.dx : ((keys["KeyD"]?1:0) - (keys["KeyA"]?1:0)),
 				dy: joyOn ? mobile.dy : ((keys["KeyS"]?1:0) - (keys["KeyW"]?1:0)),
@@ -8335,8 +8340,14 @@
 				if (s.fx != null) p.facingX = s.fx;
 				if (s.fy != null) p.facingY = s.fy;
 				if (s.nm) p.displayName = s.nm;
+				if (s.g != null) p.goals = s.g;
+				if (s.a != null) p.statAssists = s.a;
+				if (s.tk != null) p.statTackles = s.tk;
+				if (s.sv != null) p.statSaves = s.sv;
 			});
-			const hid = (w.ball && w.ball.hid != null) ? w.ball.hid : (w.hid != null ? w.hid : -1);
+			const hid = (w.ball && (w.ball.owner != null || w.ball.hid != null))
+				? (w.ball.owner != null ? w.ball.owner : w.ball.hid)
+				: (w.owner != null ? w.owner : (w.hid != null ? w.hid : -1));
 			const holdMine = hid >= 0 && players[hid] && players[hid].team === my;
 			if (w.ball && !holdMine) {
 				ball.x = w.ball.x; ball.y = w.ball.y;
@@ -8351,7 +8362,7 @@
 				const a = document.getElementById("pScore"); if (a) a.textContent = scoreBlue;
 				const b = document.getElementById("eScore"); if (b) b.textContent = scoreRed;
 			}
-			if (w.act) window.onlineMatch.seeAct = w.act;
+			window.onlineMatch.seeAct = "";
 			if (w.sp) {
 				if (!setPiece || setPiece.type !== w.sp.type || setPiece.team !== w.sp.team) {
 					setPiece = { type: w.sp.type, team: w.sp.team, x: w.sp.x, y: w.sp.y, timer: 90, taken: false, charge: w.sp.charge || 0, chargeMode: w.sp.mode || "shoot", whistle: w.sp.w || 0, aimX: 0, aimY: 0, wasHolding: false };
@@ -12774,23 +12785,36 @@
 					}
 					ctx.globalAlpha = 1.0;
 
-					// Nome do jogador (+ posição se diferente)
 					const labelName = p.displayName || p.positionName || "";
-					const labelPos = (p.displayName && p.positionName && p.displayName !== p.positionName) ? p.positionName : "";
+					const labelPos = p.positionName && p.displayName && p.displayName !== p.positionName ? p.positionName : "";
+					let statBits = [];
+					if (p.goals) statBits.push(p.goals + "G");
+					if (p.statAssists) statBits.push(p.statAssists + "A");
+					if (p.role === "gk" && p.statSaves) statBits.push(p.statSaves + "D");
+					else if (p.statTackles) statBits.push(p.statTackles + "T");
+					const statLine = statBits.join(" ");
 					ctx.textAlign = "center";
 					ctx.lineWidth = 3;
-					ctx.strokeStyle = "rgba(0,0,0,0.65)";
+					ctx.strokeStyle = "rgba(0,0,0,0.7)";
+					let nameY = p.y - p.radius - (statLine ? 22 : 10);
+					if (labelPos) nameY -= 11;
 					if (labelName) {
 						ctx.font = "bold 11px 'Segoe UI', Tahoma";
 						ctx.fillStyle = p.isUser ? "#ffd700" : "#ffffff";
-						ctx.strokeText(labelName, p.x, p.y - p.radius - 10);
-						ctx.fillText(labelName, p.x, p.y - p.radius - 10);
+						ctx.strokeText(labelName, p.x, nameY);
+						ctx.fillText(labelName, p.x, nameY);
 					}
 					if (labelPos) {
 						ctx.font = "9px 'Segoe UI', Tahoma";
-						ctx.fillStyle = "rgba(255,255,255,0.85)";
-						ctx.strokeText(labelPos, p.x, p.y - p.radius - 22);
-						ctx.fillText(labelPos, p.x, p.y - p.radius - 22);
+						ctx.fillStyle = "rgba(255,255,255,0.8)";
+						ctx.strokeText(labelPos, p.x, nameY + 11);
+						ctx.fillText(labelPos, p.x, nameY + 11);
+					}
+					if (statLine) {
+						ctx.font = "bold 9px 'Segoe UI', Tahoma";
+						ctx.fillStyle = p.team === 1 ? "#80d8ff" : "#ffab91";
+						ctx.strokeText(statLine, p.x, p.y - p.radius - 8);
+						ctx.fillText(statLine, p.x, p.y - p.radius - 8);
 					}
 
 					if (p.isUser && p.power > 0) {
@@ -12875,13 +12899,23 @@
 				ballGrad.addColorStop(1, "#d0d0d0");
 				ctx.fillStyle = ballGrad;
 				ctx.fill();
-				ctx.strokeStyle = "#222";
-				ctx.lineWidth = 1.5;
+				ctx.strokeStyle = ball.holder ? (ball.holder.team === 1 ? "#4fc3f7" : "#ff8a65") : "#222";
+				ctx.lineWidth = ball.holder ? 2.4 : 1.5;
 				ctx.stroke();
 				ctx.beginPath();
 				ctx.arc(ball.x, drawY, Math.max(1.5, drawR * 0.35), 0, Math.PI * 2);
 				ctx.fillStyle = "#222";
 				ctx.fill();
+				if (ball.holder) {
+					const oname = (ball.holder.displayName || ball.holder.positionName || "dono").split(" ")[0];
+					ctx.font = "bold 10px 'Segoe UI', Tahoma";
+					ctx.textAlign = "center";
+					ctx.lineWidth = 3;
+					ctx.strokeStyle = "rgba(0,0,0,0.7)";
+					ctx.fillStyle = ball.holder.team === 1 ? "#4fc3f7" : "#ff8a65";
+					ctx.strokeText(oname, ball.x, drawY - drawR - 6);
+					ctx.fillText(oname, ball.x, drawY - drawR - 6);
+				}
 			}
 
 			ctx.restore();
@@ -13109,19 +13143,7 @@
 				ctx.fillStyle = "#ffd700";
 				ctx.fillText("APITO", sx, sy + 16);
 			}
-			const flash = (window.onlineMatch && (window.onlineMatch.seeAct || ((window.onlineMatch.lastActUntil || 0) > Date.now() ? window.onlineMatch.lastAct : ""))) || "";
-			if (flash) {
-				ctx.save();
-				ctx.font = "bold 28px 'Segoe UI', Tahoma";
-				ctx.textAlign = "center";
-				ctx.fillStyle = "rgba(255,215,0,0.92)";
-				ctx.strokeStyle = "#111";
-				ctx.lineWidth = 4;
-				ctx.strokeText(flash, canvas.width / 2, 52);
-				ctx.fillText(flash, canvas.width / 2, 52);
-				ctx.restore();
 			}
-		}
 
 		function resizeCanvas() {
 			// Mantém proporção aproximada do campo, mas adapta à tela
