@@ -249,6 +249,14 @@
 		}
 		.hub-home-hero h3 { margin: 0 0 4px; color: #e8c547; font-size: 20px; }
 		.hub-home-hero span { color: #cfe3ff; font-size: 12px; }
+		body.is-mobile .hub-tile { min-height: 76px; padding: 14px 12px; }
+		body.is-mobile .hub-tile b { font-size: 16px; }
+		body.is-mobile .hub-top { padding: 8px 10px; }
+		body.is-mobile .action-btn { transform: scale(1.06); }
+		body.is-mobile #joystickZone { width: 156px; height: 156px; }
+		body.is-mobile #joystickBase { width: 132px; height: 132px; }
+		body.is-mobile .menu-row, body.is-mobile .hub-body { font-size: 15px; }
+		body.is-mobile #matchStatsBox { font-size: 14px; }
 		.menu-nav {
 			display: flex; gap: 6px; margin-bottom: 10px;
 			align-items: center; justify-content: center; flex-wrap: wrap;
@@ -1076,7 +1084,7 @@
 			position: absolute;
 			left: 42px;
 			bottom: 168px;
-			display: none !important; /* especial agora é toque duplo no joystick */
+			display: none;
 			width: 56px;
 			height: 56px;
 			border-radius: 50%;
@@ -1093,7 +1101,9 @@
 			touch-action: none;
 			box-shadow: 0 3px 10px rgba(0,0,0,0.5);
 		}
-		#btnSkill.visible { display: none !important; }
+		#btnSkill.visible { display: flex; }
+		#mobileControls.skill-joy #btnSkill { left: 42px; bottom: 168px; right: auto; }
+		#mobileControls.skill-sprint #btnSkill { left: auto; right: 168px; bottom: 82px; }
 		#btnSkill:active, #btnSkill.active { transform: scale(0.94); filter: brightness(1.15); }
 		#btnSkill.used { opacity: 0.35; border-color: #888; color: #aaa; background: #333; }
 		#btnDribble {
@@ -1914,6 +1924,15 @@
 									<option value="ball">Seguir bola</option>
 								</select>
 							</div>
+							<div class="menu-row">
+								<label>Habilidade</label>
+								<select id="selSkillMode">
+									<option value="doubletap" selected>Toque duplo no joystick</option>
+									<option value="btnJoy">Botão em cima do joystick</option>
+									<option value="dribbleUp">Drible + arrastar para cima</option>
+									<option value="btnSprint">Botão em cima do sprint</option>
+								</select>
+							</div>
 							<div class="menu-row-check">
 								<label>
 									<input type="checkbox" id="chkMouseAim" checked>
@@ -2728,7 +2747,7 @@
 
 			if (centerTapCount >= 2) {
 				centerTapCount = 0;
-				if (userPlayer) activatePlayerSkill(userPlayer);
+				if (currentSkillMode() === "doubletap" && userPlayer) activatePlayerSkill(userPlayer);
 				joyKnob.style.boxShadow = "0 0 14px rgba(255,215,0,0.95)";
 				setTimeout(() => {
 					joyKnob.style.boxShadow = "0 2px 8px rgba(0,0,0,0.4)";
@@ -2839,14 +2858,23 @@
 		(function setupDribbleButton() {
 			const btn = document.getElementById("btnDribble");
 			if (!btn) return;
+			let startY = 0;
 			const fire = (e) => {
-				e.preventDefault();
 				const now = Date.now();
 				const taps = (now - lastDriTapAt < 320) ? 2 : 1;
 				lastDriTapAt = now;
 				if (userPlayer) tryDribble(userPlayer, taps);
 			};
-			btn.addEventListener("touchstart", fire, { passive: false });
+			btn.addEventListener("touchstart", (e) => {
+				e.preventDefault();
+				startY = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientY : 0;
+				fire(e);
+			}, { passive: false });
+			btn.addEventListener("touchmove", (e) => {
+				if (currentSkillMode() !== "dribbleUp") return;
+				const y = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientY : startY;
+				if (startY - y > 42 && userPlayer) activatePlayerSkill(userPlayer);
+			}, { passive: true });
 			btn.addEventListener("mousedown", fire);
 		})();
 
@@ -3330,12 +3358,15 @@
 
 				if (ball.holder && ball.holder.team !== this.team) {
 					let holder = ball.holder;
+					const controlOn = holder.skillControlUntil && Date.now() < holder.skillControlUntil;
+					if (controlOn && !this.isSliding) return;
 					
 					let foulChance = 0.08;
 					if (this.team === 2 && difficulty === "hard") foulChance = 0.06;
 					if (this.team === 2 && difficulty === "easy") foulChance = 0.12;
 					if (this.isUser) foulChance = 0.07;
 					foulChance *= Math.max(0.5, 1.2 - tkl * 0.15);
+					if (controlOn && this.isSliding) foulChance = Math.min(0.92, foulChance * 2.4);
 
 					if (Math.random() < foulChance && !setPiece) {
 						holder.stunTime = 120;
@@ -3565,6 +3596,7 @@
 				lang: LANG,
 				sprintMode: (document.getElementById("selSprintMode") || {}).value || "tap",
 				cameraMode: (document.getElementById("selCamera") || {}).value || "player",
+				skillMode: (document.getElementById("selSkillMode") || {}).value || "doubletap",
 				mouseAim: !!(document.getElementById("chkMouseAim") || {}).checked,
 				flatButtons: !!(document.getElementById("chkFlatButtons") || {}).checked,
 				sprintLeft: !!(document.getElementById("chkSprintLeft") || {}).checked,
@@ -3594,6 +3626,7 @@
 			}
 			setVal("selSprintMode", data.sprintMode === "doubletap" ? "tap" : data.sprintMode);
 			setVal("selCamera", data.cameraMode || "player");
+			setVal("selSkillMode", data.skillMode || "doubletap");
 			setVal("chkMouseAim", data.mouseAim);
 			setVal("chkFlatButtons", data.flatButtons);
 			setVal("chkSprintLeft", data.sprintLeft);
@@ -3609,7 +3642,7 @@
 		}
 		function bindSettingsAutosave() {
 			const ids = [
-				"selSprintMode", "selCamera", "chkMouseAim", "chkFlatButtons", "chkSprintLeft",
+				"selSprintMode", "selCamera", "selSkillMode", "chkMouseAim", "chkFlatButtons", "chkSprintLeft",
 				"chkEnhancedGfx", "chkExtraGfx", "selWeather", "selSpeed",
 				"chkOffside", "chkAutoSub", "selTime", "selDifficulty"
 			];
@@ -3853,13 +3886,15 @@
 			world: { "1": 8000000, "2": 3500000, "3": 1500000 }
 		};
 		const FIELD_ATTRS = ["velocidade", "resistencia", "precisao", "forca", "desarme", "posicionamento", "dominio", "drible"];
-		const SKILL_TYPES = ["chip", "curve", "trickdribble", "luckyslide", "highcross"];
+		const SKILL_TYPES = ["chip", "curve", "trickdribble", "luckyslide", "highcross", "burst", "control"];
 		const SKILL_LABEL = {
 			chip: "Cavadinha",
 			curve: "Chute com efeito",
 			trickdribble: "Drible malandro",
 			luckyslide: "Carrinho da sorte",
-			highcross: "Cruzamento alto"
+			highcross: "Cruzamento alto",
+			burst: "Arrancada",
+			control: "Controlo"
 		};
 		const DRIBBLE_MOVES = {
 			chapeu: { id: "chapeu", name: "Chapéu", combo: "↓ ↑ DRI", seq: ["D", "U"], taps: 1 },
@@ -8074,6 +8109,9 @@
 				window.onlineMatch.room = msg.room;
 				window.onlineMatch.role = msg.you || window.onlineMatch.role;
 				renderOnlineLobbyWait(msg.room);
+				if (msg.room && msg.room.guest && msg.room.host) {
+					setTimeout(() => { try { onlineReady(); } catch (e) {} }, 250);
+				}
 			}
 			if (msg.type === "readyState") renderOnlineLobbyWait(msg.room);
 			if (msg.type === "matchStart") {
@@ -8277,7 +8315,8 @@
 				players: players.map(p => ({
 					x: p.x, y: p.y, t: p.team, r: p.role, fx: p.facingX, fy: p.facingY,
 					u: !!p.isUser, nm: p.displayName || p.positionName || ""
-				}))
+				})),
+				fx: { replay: !!goalReplay, celeb: !!(goalCeleb && goalCeleb.active), kick: !!kickoff }
 			};
 		}
 		function applyOnlineState(st) {
@@ -8305,7 +8344,7 @@
 				for (let i = 0; i < n; i++) {
 					const p = players[i], s = st.players[i];
 					if (!p || !s) continue;
-					if (p === userPlayer && window.onlineMatch.role === "guest") {
+					if (p === userPlayer && window.onlineMatch.role === "guest" && !(st.fx && st.fx.replay)) {
 						if (s.nm) p.displayName = s.nm;
 						continue;
 					}
@@ -8314,6 +8353,10 @@
 					if (s.fy != null) p.facingY = s.fy;
 					if (s.nm) p.displayName = s.nm;
 				}
+			}
+			if (st.fx) {
+				if (st.fx.replay && !goalReplay) goalReplay = { frames: [], i: 0, dummy: true };
+				if (!st.fx.replay && goalReplay && goalReplay.dummy) goalReplay = null;
 			}
 		}
 		function pumpOnlineNet() {
@@ -8392,7 +8435,7 @@
 			}
 			const meta = DIFF_META[diffVal];
 			// Partidas de liga/torneiro: dificuldade liberada automaticamente para o jogo
-			if (!isLeagueMatch) {
+			if (!isLeagueMatch && !(window.onlineMatch && window.onlineMatch.active)) {
 				if (meta && meta.unlock.startsWith("coins:") && !beta.unlockedPaid[diffVal]) {
 					if (!tryUnlockPaidDiff(diffVal)) {
 						alert("Moedas insuficientes para liberar " + meta.label);
@@ -8545,6 +8588,8 @@
 				sprintBtn.classList.remove("active");
 			}
 
+			applySkillModeLayout();
+			applyMobileLayout();
 			gameState = "playing";
 			lastTick = Date.now();
 			try { CG.gameplayStart(); } catch (e) {}
@@ -8875,7 +8920,8 @@
 			if (!box) return;
 			box.style.display = "block";
 			box.innerHTML = `
-				<div style="margin-top:10px;text-align:left;font-size:13px;line-height:1.45">
+				<div style="margin-top:10px;text-align:left;font-size:13px;line-height:1.45;position:relative">
+					<button type="button" onclick="document.getElementById('matchStatsBox').style.display='none'" style="position:absolute;right:0;top:0;width:32px;height:32px;border:none;border-radius:16px;background:#c62828;color:#fff;font-weight:bold;cursor:pointer">✕</button>
 					<div style="text-align:center;font-weight:bold;margin-bottom:6px;color:#ffd700">Estatísticas</div>
 					<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:4px 10px;align-items:center">
 						<div style="text-align:right;color:#4fc3f7">${matchStats.team1.shots}</div>
@@ -10438,7 +10484,7 @@
 		function activatePlayerSkill(p) {
 			if (!p || !p.skill || p.skillUsedThisMatch) return false;
 			const kind = p.skill;
-			const needBall = kind !== "luckyslide";
+			const needBall = kind !== "luckyslide" && kind !== "burst";
 			if (needBall && ball.holder !== p) return false;
 			p.skillUsedThisMatch = true;
 			if (p.rosterId != null && beta && beta.roster) {
@@ -10488,9 +10534,36 @@
 				triggerCross(p);
 				ball.speedAir = 3.2 * gameSpeedMult;
 				ball.height = 0.7;
+			} else if (kind === "burst") {
+				p.skillBurstUntil = Date.now() + 10000;
+			} else if (kind === "control") {
+				p.skillControlUntil = Date.now() + 10000;
 			}
 			updateSkillButton();
 			return true;
+		}
+		function applyMobileLayout() {
+			const mobile = window.matchMedia("(pointer: coarse)").matches
+				|| window.innerWidth <= 900
+				|| /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent || "");
+			document.body.classList.toggle("is-mobile", !!mobile);
+		}
+		window.addEventListener("resize", () => { try { applyMobileLayout(); } catch (e) {} });
+		function currentSkillMode() {
+			return ((document.getElementById("selSkillMode") || {}).value) || "doubletap";
+		}
+		function applySkillModeLayout() {
+			const mode = currentSkillMode();
+			const mob = document.getElementById("mobileControls");
+			if (mob) {
+				mob.classList.toggle("skill-joy", mode === "btnJoy");
+				mob.classList.toggle("skill-sprint", mode === "btnSprint");
+			}
+			updateSkillButton();
+		}
+		function skillSpeedMul(p) {
+			if (p && p.skillBurstUntil && Date.now() < p.skillBurstUntil) return 1.38;
+			return 1;
 		}
 		function updateSkillButton() {
 			const btn = document.getElementById("btnSkill");
@@ -10501,7 +10574,9 @@
 				btn.title = "Habilidade";
 				return;
 			}
-			btn.classList.add("visible");
+			const mode = currentSkillMode();
+			if (mode === "btnJoy" || mode === "btnSprint") btn.classList.add("visible");
+			else btn.classList.remove("visible");
 			btn.classList.toggle("used", !!p.skillUsedThisMatch);
 			btn.title = (SKILL_LABEL[p.skill] || p.skill) + (p.skillUsedThisMatch ? " (já usada)" : " (1x)");
 		}
@@ -11142,13 +11217,13 @@
 				userPlayer.x += dx * userPlayer.speed;
 				userPlayer.y += dy * userPlayer.speed;
 			} else if (isSprinting) {
-				userPlayer.speed = userPlayer.sprintSpeed * exhaustFactor;
+				userPlayer.speed = userPlayer.sprintSpeed * exhaustFactor * skillSpeedMul(userPlayer);
 				userPlayer.stamina = Math.max(0, userPlayer.stamina - 0.7);
 				userPlayer.matchStamina = Math.max(0, userPlayer.matchStamina - 0.032);
 				userPlayer.x += dx * userPlayer.speed;
 				userPlayer.y += dy * userPlayer.speed;
 			} else {
-				userPlayer.speed = userPlayer.baseSpeed * exhaustFactor;
+				userPlayer.speed = userPlayer.baseSpeed * exhaustFactor * skillSpeedMul(userPlayer);
 				if (!isMoving) {
 					userPlayer.stamina = Math.min(100, userPlayer.stamina + 1.2);
 					userPlayer.matchStamina = Math.max(0, userPlayer.matchStamina - 0.0015);
@@ -13095,6 +13170,7 @@
 				setTutorialMenuOnly(true);
 				hubGo("home");
 				grantStarterPackIfNeeded();
+				applyMobileLayout();
 			} catch (e) { console.warn(e); }
 			setTimeout(() => {
 				try { CG.loadingStop(); } catch (e) {}
