@@ -3290,6 +3290,7 @@
 					fx /= len; fy /= len;
 				}
 				ball.holder = null;
+				if (window.onlineMatch) window.onlineMatch.freeBallUntil = Date.now() + 550;
 				const accM = (this.attrMult && this.attrMult.accuracy) || 1;
 				const strM = (this.attrMult && this.attrMult.strength) || 1;
 				powerMult *= (0.75 + strM * 0.35);
@@ -8348,14 +8349,27 @@
 			const hid = (w.ball && (w.ball.owner != null || w.ball.hid != null))
 				? (w.ball.owner != null ? w.ball.owner : w.ball.hid)
 				: (w.owner != null ? w.owner : (w.hid != null ? w.hid : -1));
-			const holdMine = hid >= 0 && players[hid] && players[hid].team === my;
-			if (w.ball && !holdMine) {
-				ball.x = w.ball.x; ball.y = w.ball.y;
-				ball.vx = w.ball.vx || 0; ball.vy = w.ball.vy || 0;
-				ball.height = w.ball.h || 0; ball.inAir = !!w.ball.air;
-				ball.holder = hid >= 0 ? players[hid] : null;
-			} else if (holdMine) {
-				ball.holder = players[hid];
+			const spdNet = w.ball ? Math.hypot(w.ball.vx || 0, w.ball.vy || 0) : 0;
+			const freeLock = Date.now() < (window.onlineMatch.freeBallUntil || 0);
+			const loose = freeLock || hid < 0 || !!w.ball && (w.ball.air || spdNet > 0.4);
+			if (loose) {
+				if (w.ball && !freeLock) {
+					ball.x = w.ball.x; ball.y = w.ball.y;
+					ball.vx = w.ball.vx || 0; ball.vy = w.ball.vy || 0;
+					ball.height = w.ball.h || 0; ball.inAir = !!w.ball.air;
+				}
+				ball.holder = null;
+			} else if (hid >= 0 && players[hid]) {
+				if (players[hid].team !== my) {
+					if (w.ball) {
+						ball.x = w.ball.x; ball.y = w.ball.y;
+						ball.vx = 0; ball.vy = 0;
+						ball.height = 0; ball.inAir = false;
+					}
+					ball.holder = players[hid];
+				} else if (!ball.holder) {
+					ball.holder = players[hid];
+				}
 			}
 			if (w.score) {
 				scoreBlue = w.score[0]; scoreRed = w.score[1];
@@ -10303,6 +10317,7 @@
 			else team2PassCount = 0;
 
 			ball.holder = null;
+			if (window.onlineMatch) window.onlineMatch.freeBallUntil = Date.now() + 550;
 			ball.inAir = true;
 			ball.startX = ball.x;
 			ball.startY = ball.y;
@@ -12089,10 +12104,12 @@
 					ball.cooldown = 6;
 				}
 			} else if (ball.holder) {
-				// Checa impedimento ao receber passe
+				if (ball.inAir || Math.hypot(ball.vx || 0, ball.vy || 0) > 0.85) {
+					ball.holder = null;
+				} else {
 				if (lastPassPlayer && ball.holder !== lastPassPlayer && ball.holder.team === lastPassPlayer.team) {
 					if (checkOffsideOnReceive(ball.holder)) return;
-					lastPassOffsideList = []; // recebeu limpo
+					lastPassOffsideList = [];
 				}
 				ball.height = 0;
 				const hx = ball.holder.x + (ball.holder.facingX || 0) * (ball.holder.radius + ball.radius + 2);
@@ -12101,6 +12118,7 @@
 				ball.y += (hy - ball.y) * 0.32;
 				ball.vx = 0; ball.vy = 0;
 				lastTouchTeam = ball.holder.team;
+				}
 			} else {
 				// Movimento em sub-passos evita a bola "atravessar" o goleiro
 				let steps = Math.max(1, Math.ceil(Math.hypot(ball.vx, ball.vy) / 6));
