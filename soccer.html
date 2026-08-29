@@ -3372,6 +3372,10 @@
 			}
 
 			executeSuccessfulTackle(ball) {
+				if (!ball || setPiece || foulPause > 0) return;
+				if ((ball.stealLock || 0) > 0 && ball.holder && ball.holder.team !== this.team) return;
+				const nearBall = Math.hypot(this.x - ball.x, this.y - ball.y) < (this.tackleRange || 32) + 14;
+				if (!nearBall) return;
 				const tkl = (this.attrMult && this.attrMult.tackle) || 1;
 				this.tackleCooldown = Math.max(18, 40 - tkl * 8);
 				this.stamina = Math.max(0, this.stamina - 6);
@@ -3414,17 +3418,20 @@
 						ball.y = this.y + (this.facingY || 0) * 15;
 						ball.vx = 0;
 						ball.vy = 0;
-						ball.cooldown = 0;
+						ball.cooldown = 10;
+						ball.stealLock = 22;
 						lastTouchTeam = this.team;
 						lastTouchPlayer = this;
 						if (this.isUser) {
 							this.ignorePassWhileHeld = true;
 							this.passHold = 0;
 						}
+						if (window.onlineMatch) window.onlineMatch.freeBallUntil = 0;
 					} else {
-						ball.vx = this.facingX * (7 * gameSpeedMult); 
-						ball.vy = this.facingY * (7 * gameSpeedMult);
+						ball.vx = (this.facingX || 0) * (7 * gameSpeedMult);
+						ball.vy = (this.facingY || 0) * (7 * gameSpeedMult);
 						ball.cooldown = 15;
+						ball.stealLock = 8;
 						lastTouchTeam = this.team;
 						lastTouchPlayer = this;
 					}
@@ -8354,16 +8361,18 @@
 				: (w.owner != null ? w.owner : (w.hid != null ? w.hid : -1));
 			const freeLock = Date.now() < (window.onlineMatch.freeBallUntil || 0);
 			const iHold = ball.holder && ball.holder.team === my;
+			const netOwner = hid >= 0 ? players[hid] : null;
 			if (freeLock) {
 				ball.holder = null;
-			} else if (iHold) {
-				/* dono local manda; servidor não arranca a bola */
-			} else if (hid >= 0 && players[hid]) {
-				ball.holder = players[hid];
+			} else if (netOwner && netOwner.team !== my) {
+				ball.holder = netOwner;
 				ball.vx = 0; ball.vy = 0; ball.inAir = false; ball.height = 0;
-				if (players[hid].team !== my && w.ball) {
-					ball.x = w.ball.x; ball.y = w.ball.y;
-				}
+				if (w.ball) { ball.x = w.ball.x; ball.y = w.ball.y; }
+			} else if (iHold) {
+				/* dono local */
+			} else if (netOwner) {
+				ball.holder = netOwner;
+				ball.vx = 0; ball.vy = 0; ball.inAir = false; ball.height = 0;
 			} else if (w.ball) {
 				ball.holder = null;
 				ball.x = w.ball.x; ball.y = w.ball.y;
@@ -8720,16 +8729,19 @@
 			try { tickIncomingOffers(); } catch (e) {}
 			// Lesão: reduz contador por partida
 			(beta.roster || []).forEach(r => {
-				if (r.injuredUntil && Date.now() >= r.injuredUntil) {
-					r.injuredUntil = 0;
-					r.injuryMatches = 0;
-					addNews(r.name + " recuperou da lesão!");
-				} else if (r.injuryMatches && r.injuryMatches > 0) {
+				if (r.injuryMatches && r.injuryMatches > 0) {
 					r.injuryMatches--;
 					if (r.injuryMatches <= 0) {
 						r.injuredUntil = 0;
-						addNews(r.name + " recuperou da lesão!");
+						r.injuryMatches = 0;
+						addNews((r.name || "Jogador") + " recuperou da lesão!");
+					} else {
+						r.injuredUntil = Date.now() + r.injuryMatches * 50 * 60 * 1000;
 					}
+				} else if (r.injuredUntil && Date.now() >= r.injuredUntil) {
+					r.injuredUntil = 0;
+					r.injuryMatches = 0;
+					addNews((r.name || "Jogador") + " recuperou da lesão!");
 				}
 			});
 			// Carreira individual + moral (vontade pelo clube)
@@ -9661,6 +9673,10 @@
 		}
 
 		function startSetPiece(type, team, x, y) {
+			if (!type || !team) return;
+			if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+			x = Math.max(20, Math.min(fieldWidth - 20, x));
+			y = Math.max(20, Math.min(fieldHeight - 20, y));
 			tryAutoSubstitution();
 			setPiece = {
 				type: type,
@@ -9935,12 +9951,12 @@
 		function injurePlayer(victim) {
 			if (!victim || victim.isSentOff || victim.role === 'gk') return false;
 			sendOffPlayer(victim);
-			foulPause = 70;
-			foulMessage = "LESÃO!";
-			pendingSetPiece = null;
+			foulPause = Math.max(foulPause, 70);
+			foulMessage = foulMessage && pendingSetPiece ? foulMessage + " + LESÃO!" : "LESÃO!";
 			ball.holder = null;
 			ball.vx = 0; ball.vy = 0;
 			ball.cooldown = 20;
+			ball.stealLock = 20;
 			unlockAch("lesao");
 			// Fora por 2–4 partidas (tempo real ~1.5–3h de conta)
 			if (victim.rosterId != null && beta && beta.roster) {
@@ -10017,11 +10033,14 @@
 		}
 
 		function callFoul(fouler, victim, wasSlide) {
-			// Queda curta — não trava o jogador a partida inteira da cobrança
-			victim.stunTime = Math.max(victim.stunTime, 28);
+			if (!fouler || !victim) return;
+			if (setPiece || pendingSetPiece || foulPause > 0) return;
+			if (gameState !== "playing") return;
+			victim.stunTime = Math.max(victim.stunTime || 0, 28);
 			ball.holder = null;
 			ball.vx = 0; ball.vy = 0;
-			ball.cooldown = 15;
+			ball.cooldown = 18;
+			ball.stealLock = 24;
 
 			let foulX = victim.x;
 			let foulY = victim.y;
@@ -10148,6 +10167,8 @@
 				ball.vy = fy * power * gameSpeedMult;
 			}
 			ball.cooldown = 14;
+			ball.stealLock = 12;
+			if (window.onlineMatch) window.onlineMatch.freeBallUntil = Date.now() + 400;
 			lastTouchTeam = taker.team;
 			lastTouchPlayer = taker;
 			if (mode === "pass" || mode === "cross") {
@@ -11950,6 +11971,7 @@
 			}
 
 			if (ball.cooldown > 0) ball.cooldown--;
+			if (ball.stealLock > 0) ball.stealLock--;
 
 			// Rastro da bola (quanto mais rápida, mais opaco)
 			if (enhancedGraphics) {
