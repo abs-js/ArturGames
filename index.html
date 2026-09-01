@@ -651,10 +651,16 @@ input, select {
   const HOT_N = 4;
   const STACK = 32;
   const PLACEABLE = new Set(["bloco_madeira", "bloco_pedra", "mesa", "bote", "cama", "forno", "bau", "bancada"]);
-  const WEAPONS = new Set(["porrete", "machado", "lanca", "espada", "arco", "vara"]);
+  const WEAPONS = new Set(["porrete", "machado", "lanca", "espada", "arco", "vara", "picareta", "machado_ferro", "picareta_ferro", "espada_ferro"]);
   const FOOD_RAW = new Set(["carne_crua", "peixe_cru"]);
   const FOOD_OK = { pao: 5, carne: 8, peixe: 6 };
-  const COOK = { carne_crua: "carne", peixe_cru: "peixe" };
+  const COOK = {
+    carne_crua: "carne",
+    peixe_cru: "peixe",
+    ferro_bruto: "ferro",
+    cobre_bruto: "cobre",
+    ouro_bruto: "ouro",
+  };
 
   const ITEM = {
     madeira: { name: "Madeira", stack: STACK },
@@ -662,10 +668,19 @@ input, select {
     ouro: { name: "Ouro", stack: STACK },
     mapa: { name: "Mapa", stack: STACK },
     pao: { name: "Pão", stack: STACK },
-    porrete: { name: "Porrete", stack: 1, dmg: 4, rate: 420, dur: 40, color: "#8b5a2b" },
-    machado: { name: "Machado", stack: 1, dmg: 7, rate: 560, dur: 55, color: "#6b5344" },
-    lanca: { name: "Lança", stack: 1, dmg: 8, rate: 300, dur: 45, color: "#c4b48a" },
-    espada: { name: "Espada", stack: 1, dmg: 11, rate: 380, dur: 70, color: "#9aa4b2" },
+    porrete: { name: "Porrete", stack: 1, dmg: 4, rate: 420, dur: 40, color: "#8b5a2b", tree: 1, rock: 1, area: 0 },
+    machado: { name: "Machado", stack: 1, dmg: 5, rate: 560, dur: 55, color: "#6b5344", tree: 3, rock: 1, area: 1 },
+    picareta: { name: "Picareta", stack: 1, dmg: 3, rate: 500, dur: 60, color: "#8a9098", tree: 1, rock: 3, area: 0 },
+    lanca: { name: "Lança", stack: 1, dmg: 8, rate: 300, dur: 45, color: "#c4b48a", tree: 1, rock: 1, area: 0 },
+    espada: { name: "Espada", stack: 1, dmg: 12, rate: 360, dur: 70, color: "#9aa4b2", tree: 1, rock: 1, area: 0 },
+    machado_ferro: { name: "Machado de ferro", stack: 1, dmg: 7, rate: 520, dur: 110, color: "#7a8490", tree: 5, rock: 1, area: 1 },
+    picareta_ferro: { name: "Picareta de ferro", stack: 1, dmg: 4, rate: 460, dur: 120, color: "#9aa4b2", tree: 1, rock: 5, area: 0 },
+    espada_ferro: { name: "Espada de ferro", stack: 1, dmg: 16, rate: 340, dur: 130, color: "#c0c8d4", tree: 1, rock: 1, area: 0 },
+    ferro_bruto: { name: "Minério de ferro", stack: STACK },
+    ferro: { name: "Ferro", stack: STACK },
+    cobre_bruto: { name: "Minério de cobre", stack: STACK },
+    cobre: { name: "Cobre", stack: STACK },
+    ouro_bruto: { name: "Minério de ouro", stack: STACK },
     bloco_madeira: { name: "Bloco de madeira", stack: STACK, solid: true, hp: 5 },
     bloco_pedra: { name: "Bloco de pedra", stack: STACK, solid: true, hp: 9 },
     mesa: { name: "Mesa", stack: STACK, solid: true, hp: 6 },
@@ -691,6 +706,7 @@ input, select {
     { id: "machado", need: { madeira: 8, pedra: 3 } },
     { id: "lanca", need: { madeira: 6, pedra: 2 } },
     { id: "espada", need: { madeira: 4, pedra: 8 } },
+    { id: "picareta", need: { madeira: 3, pedra: 4 } },
     { id: "bloco_madeira", need: { madeira: 4 } },
     { id: "bloco_pedra", need: { pedra: 4 } },
     { id: "bancada", need: { madeira: 2 } },
@@ -708,9 +724,13 @@ input, select {
     { id: "bau", need: { madeira: 4 } },
     { id: "machado", need: { madeira: 6, pedra: 2 } },
     { id: "espada", need: { madeira: 3, pedra: 6 } },
+    { id: "picareta", need: { madeira: 3, pedra: 3 } },
+    { id: "machado_ferro", need: { madeira: 4, ferro: 4 } },
+    { id: "picareta_ferro", need: { madeira: 3, ferro: 5 } },
+    { id: "espada_ferro", need: { madeira: 2, ferro: 6 } },
   ];
 
-  const FISTS = { id: "punhos", name: "Punhos", dmg: 2, rate: 450, dur: Infinity, maxDur: Infinity, color: "#e8c4a8" };
+  const FISTS = { id: "punhos", name: "Punhos", dmg: 2, rate: 450, dur: Infinity, maxDur: Infinity, color: "#e8c4a8", tree: 1, rock: 1, area: 0 };
 
   const NPC_POOL = [
     { job: "Mercadora", shop: "trade", color: "#d4a0c8", talk: "Troco recursos por ouro." },
@@ -898,6 +918,8 @@ input, select {
     state.ship = { x: ship.x - 3, y: ship.y - 1, w: 7, h: 3 };
     const house = placeLandmark(seed, 53, 32, 78);
     state.house = { x: house.x - 2, y: house.y - 2, w: 4, h: 3 };
+    const vein = placeLandmark(seed, 67, 22, 55);
+    state.vein = { x: vein.x - 2, y: vein.y - 2, w: 5, h: 5 };
   }
 
   function buildVillage(origin, seed) {
@@ -964,6 +986,7 @@ input, select {
     const tiles = [];
     const trees = [];
     const rocks = [];
+    const ores = [];
     const animals = [];
     for (let ly = 0; ly < CHUNK; ly++) {
       for (let lx = 0; lx < CHUNK; lx++) {
@@ -1006,7 +1029,18 @@ input, select {
           else t = TILES.FLOOR;
         }
         tiles.push(t);
-        if (t === TILES.GRASS) {
+        const vn = state.vein;
+        const inVein = vn && tx >= vn.x && tx < vn.x + vn.w && ty >= vn.y && ty < vn.y + vn.h && t !== TILES.WATER && t !== TILES.WALL;
+        if (inVein) {
+          const edge = tx === vn.x || ty === vn.y || tx === vn.x + vn.w - 1 || ty === vn.y + vn.h - 1;
+          if (!edge && hash2(tx, ty, seed + 88) > 0.38) {
+            const roll = hash2(tx, ty, seed + 91);
+            const oid = roll > 0.82 ? "ouro_bruto" : roll > 0.48 ? "ferro_bruto" : "cobre_bruto";
+            ores.push({ tx, ty, id: oid, hp: 8 });
+          } else {
+            rocks.push({ tx, ty, hp: 6 });
+          }
+        } else if (t === TILES.GRASS) {
           const forest = fbm(tx * 0.09, ty * 0.09, seed + 99);
           if (forest > 0.58 && hash2(tx, ty, seed + 21) > 0.72) {
             trees.push({ tx, ty, hp: 3 });
@@ -1016,7 +1050,7 @@ input, select {
         }
       }
     }
-    const chunk = { cx, cy, tiles, trees, rocks, enemies: [], placed: [], animals };
+    const chunk = { cx, cy, tiles, trees, rocks, ores, enemies: [], placed: [], animals };
     stampStructures(chunk);
     if (state.dungeon) {
       const d = state.dungeon;
@@ -1098,6 +1132,7 @@ input, select {
       const t = tileAt(tx, ty);
       const pl = placedAt(tx, ty);
       if (t === TILES.WALL) return true;
+      if (treeAt(tx, ty) || rockAt(tx, ty) || oreAt(tx, ty)) return true;
       if (pl && pl.id !== "bote") return true;
       if (t === TILES.WATER) {
         if (opt.boat && (onBoatTile(tx, ty) || opt.fromBoat)) continue;
@@ -1114,6 +1149,19 @@ input, select {
   function rockAt(tx, ty) {
     const ch = ensureChunk(Math.floor(tx / CHUNK), Math.floor(ty / CHUNK));
     return ch.rocks.find((t) => t.tx === tx && t.ty === ty);
+  }
+  function oreAt(tx, ty) {
+    const ch = ensureChunk(Math.floor(tx / CHUNK), Math.floor(ty / CHUNK));
+    return (ch.ores || []).find((t) => t.tx === tx && t.ty === ty);
+  }
+  function toolInfo(w) {
+    const def = (w && ITEM[w.id]) || {};
+    return {
+      tree: def.tree || 1,
+      rock: def.rock || 1,
+      area: def.area || 0,
+      dmg: (w && w.dmg) || def.dmg || 2,
+    };
   }
 
   function makeAnimal(x, y, kind) {
@@ -1331,6 +1379,7 @@ input, select {
       chunks[key] = {
         trees: ch.trees.map((t) => ({ tx: t.tx, ty: t.ty, hp: t.hp })),
         rocks: ch.rocks.map((t) => ({ tx: t.tx, ty: t.ty, hp: t.hp })),
+        ores: (ch.ores || []).map((o) => ({ tx: o.tx, ty: o.ty, id: o.id, hp: o.hp })),
         enemies: ch.enemies.filter((e) => e.alive).map((e) => ({
           kind: e.kind, x: e.x, y: e.y, hp: e.hp,
         })),
@@ -1410,6 +1459,7 @@ input, select {
       if (saved) {
         ch.trees = (saved.trees || []).map((t) => ({ ...t }));
         ch.rocks = (saved.rocks || []).map((t) => ({ ...t }));
+        ch.ores = (saved.ores || []).map((o) => ({ ...o }));
         ch.placed = (saved.placed || []).map((p) => ({ ...p }));
         if (saved.animals) {
           ch.animals = saved.animals.map((a) => {
@@ -1731,6 +1781,26 @@ input, select {
     } else if (id === "carvao") {
       g.fillStyle = "#2a2a30"; g.fillRect(8, 10, 16, 12);
       g.fillStyle = "#555"; g.fillRect(10, 12, 6, 4);
+    } else if (id === "picareta" || id === "picareta_ferro") {
+      g.fillStyle = "#6b4423"; g.fillRect(14, 10, 4, 16);
+      g.fillStyle = id.indexOf("ferro") >= 0 ? "#c0c8d4" : "#8a9098";
+      g.fillRect(8, 8, 16, 6);
+    } else if (id === "machado_ferro") {
+      g.fillStyle = "#6b4423"; g.fillRect(14, 8, 4, 18);
+      g.fillStyle = "#c0c8d4";
+      g.beginPath(); g.moveTo(8, 8); g.lineTo(24, 8); g.lineTo(22, 16); g.lineTo(10, 16); g.fill();
+    } else if (id === "espada_ferro") {
+      g.fillStyle = "#e8eef4"; g.fillRect(15, 4, 3, 18);
+      g.fillStyle = "#8b5a2b"; g.fillRect(11, 20, 11, 4);
+    } else if (id === "ferro_bruto" || id === "ferro") {
+      g.fillStyle = id === "ferro" ? "#b8c0c8" : "#6a5348";
+      g.beginPath(); g.moveTo(6, 22); g.lineTo(12, 8); g.lineTo(22, 10); g.lineTo(26, 22); g.fill();
+    } else if (id === "cobre_bruto" || id === "cobre") {
+      g.fillStyle = id === "cobre" ? "#c47a3a" : "#8a5a38";
+      g.beginPath(); g.moveTo(6, 22); g.lineTo(12, 8); g.lineTo(22, 10); g.lineTo(26, 22); g.fill();
+    } else if (id === "ouro_bruto") {
+      g.fillStyle = "#c9a227";
+      g.beginPath(); g.moveTo(6, 22); g.lineTo(12, 8); g.lineTo(22, 10); g.lineTo(26, 22); g.fill();
     } else {
       g.fillStyle = "#888"; g.fillRect(8, 8, 16, 16);
     }
@@ -2125,6 +2195,7 @@ input, select {
       return;
     }
     const w = equippedWeapon();
+    const info = toolInfo(w);
     if (now < state.attackT) return;
     state.attackT = now + w.rate;
     state.slash = 0.18;
@@ -2133,10 +2204,21 @@ input, select {
     const ax = p.x + p.dirx * reach;
     const ay = p.y + p.diry * reach;
 
+    function hitTree(tree) {
+      tree.hp -= info.tree;
+      burst(tree.tx * TILE + 20, tree.ty * TILE + 20, "#6aa84f");
+      if (tree.hp <= 0) {
+        const ch = ensureChunk(Math.floor(tree.tx / CHUNK), Math.floor(tree.ty / CHUNK));
+        ch.trees = ch.trees.filter((t) => t !== tree);
+        addItem("madeira", 1);
+      }
+    }
+
     for (const { tx, ty } of tilesInFront()) {
       const pl = placedAt(tx, ty);
       if (pl) {
-        pl.hp -= Math.max(1, w.dmg);
+        const extra = (pl.id === "bloco_pedra" || pl.id === "forno") ? info.rock : 1;
+        pl.hp -= Math.max(1, extra);
         burst(ax, ay, "#c4a06a");
         if (pl.hp <= 0) {
           const ch = ensureChunk(Math.floor(tx / CHUNK), Math.floor(ty / CHUNK));
@@ -2148,18 +2230,29 @@ input, select {
       }
       const tree = treeAt(tx, ty);
       if (tree) {
-        tree.hp -= 1;
-        burst(ax, ay, "#6aa84f");
-        if (tree.hp <= 0) {
+        hitTree(tree);
+        if (info.area) {
+          for (const n of [{ tx: tx + 1, ty }, { tx: tx - 1, ty }, { tx, ty: ty + 1 }, { tx, ty: ty - 1 }]) {
+            const ot = treeAt(n.tx, n.ty);
+            if (ot) hitTree(ot);
+          }
+        }
+        break;
+      }
+      const ore = oreAt(tx, ty);
+      if (ore) {
+        ore.hp -= info.rock;
+        burst(ax, ay, "#c9a227");
+        if (ore.hp <= 0) {
           const ch = ensureChunk(Math.floor(tx / CHUNK), Math.floor(ty / CHUNK));
-          ch.trees = ch.trees.filter((t) => t !== tree);
-          addItem("madeira", 1);
-        } else spawnFloat(ax, ay, "chop", "#b7e08a");
+          ch.ores = ch.ores.filter((t) => t !== ore);
+          addItem(ore.id, 1);
+        } else spawnFloat(ax, ay, "tink", "#ffe08a");
         break;
       }
       const rock = rockAt(tx, ty);
       if (rock) {
-        rock.hp -= 1;
+        rock.hp -= info.rock;
         burst(ax, ay, "#c0c4c8");
         if (rock.hp <= 0) {
           const ch = ensureChunk(Math.floor(tx / CHUNK), Math.floor(ty / CHUNK));
@@ -2171,7 +2264,8 @@ input, select {
       }
     }
 
-    const reachHit = w.id === "arco" ? 118 : 46;
+    const reachHit = w.id === "arco" ? 118 : (info.area ? 66 : 46);
+    const needAlign = info.area ? -20 : 8;
     if (w.id === "arco") {
       if (countItem("flecha") <= 0) {
         showMsg("Sem flechas.");
@@ -2186,7 +2280,7 @@ input, select {
       const dx = a.x - p.x, dy = a.y - p.y;
       const dist = Math.hypot(dx, dy);
       const align = dx * p.dirx + dy * p.diry;
-      if (dist < reachHit && align > 6) {
+      if (dist < reachHit && align > needAlign) {
         a.hp -= w.dmg;
         a.hurt = 0.2;
         spawnFloat(a.x, a.y - 16, "-" + w.dmg, "#ffd0a0");
@@ -2203,7 +2297,7 @@ input, select {
       const dx = e.x - p.x, dy = e.y - p.y;
       const dist = Math.hypot(dx, dy);
       const align = dx * p.dirx + dy * p.diry;
-      if (dist < reachHit && align > 8) {
+      if (dist < reachHit && align > needAlign) {
         e.hp -= w.dmg;
         e.hurt = 0.2;
         spawnFloat(e.x, e.y - 16, "-" + w.dmg, "#ff8a7a");
@@ -2291,7 +2385,7 @@ input, select {
     $("chest").classList.add("hidden");
     $("furnace").classList.remove("hidden");
     const box = $("furn-actions");
-    const raws = ["carne_crua", "peixe_cru"].filter((id) => countItem(id) > 0);
+    const raws = Object.keys(COOK).filter((id) => countItem(id) > 0);
     const fuel = countItem("carvao") > 0 || countItem("madeira") > 0;
     box.innerHTML = "";
     if (!raws.length) {
@@ -2301,7 +2395,7 @@ input, select {
     } else {
       raws.forEach((id) => {
         const b = document.createElement("button");
-        b.textContent = "Assar " + ITEM[id].name + " → " + ITEM[COOK[id]].name;
+        b.textContent = "Esquentar " + ITEM[id].name + " → " + ITEM[COOK[id]].name;
         b.onclick = () => cookItem(id);
         box.appendChild(b);
       });
@@ -2547,6 +2641,7 @@ input, select {
     const { tx, ty } = facingTile();
     if (treeAt(tx, ty)) state.nearbyNode = "árvore";
     if (rockAt(tx, ty)) state.nearbyNode = "pedra";
+    if (oreAt(tx, ty)) state.nearbyNode = "minério";
     const standTx = Math.floor(p.x / TILE), standTy = Math.floor(p.y / TILE);
     if (tileAt(tx, ty) === TILES.BED || tileAt(standTx, standTy) === TILES.BED) state.nearbyBed = true;
     const nearPl = placedAt(tx, ty) || placedAt(standTx, standTy);
@@ -2676,6 +2771,8 @@ input, select {
         if (tree) drawTree(s.x, s.y, t, tree.hp);
         const rock = rockAt(tx, ty);
         if (rock) drawRock(s.x, s.y);
+        const ore = oreAt(tx, ty);
+        if (ore) drawOre(s.x, s.y, ore);
         const pl = placedAt(tx, ty);
         if (pl) drawPlaced(s.x, s.y, pl);
       }
@@ -2899,6 +2996,19 @@ input, select {
     ctx.fillRect(x - 14, y - 22, 28, 4);
     ctx.fillStyle = "#d05040";
     ctx.fillRect(x - 14, y - 22, 28 * Math.max(0, pl.hp / max), 4);
+  }
+  function drawOre(x, y, ore) {
+    const col = ore.id === "ferro_bruto" ? "#8a9098" : ore.id === "ouro_bruto" ? "#e0b44b" : "#c47a3a";
+    ctx.fillStyle = "#5a5858";
+    ctx.beginPath();
+    ctx.moveTo(x - 12, y + 8); ctx.lineTo(x - 8, y - 10); ctx.lineTo(x + 10, y - 6); ctx.lineTo(x + 12, y + 8);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle = col;
+    ctx.beginPath(); ctx.arc(x, y - 1, 5, 0, 7); ctx.fill();
+    ctx.fillStyle = "#3a1010";
+    ctx.fillRect(x - 12, y - 16, 24, 3);
+    ctx.fillStyle = "#d05040";
+    ctx.fillRect(x - 12, y - 16, 24 * Math.max(0, ore.hp / 8), 3);
   }
   function drawRock(x, y) {
     ctx.fillStyle = "#7b8088";
